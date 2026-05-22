@@ -5,7 +5,7 @@ import { formatPrice } from "../../utils/priceCalculation";
 import { 
   FaSync, FaEdit, FaTrash, FaPlus, FaSearch, FaBox, 
   FaCloudUploadAlt, FaExclamationTriangle, FaCheck, FaTimes, 
-  FaRegFileImage, FaImage
+  FaRegFileImage
 } from "react-icons/fa";
 import { toast } from "react-toastify";
 

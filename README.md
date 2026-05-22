@@ -149,7 +149,7 @@ verification_tokens      product_attribute_values
 ```
 nexora-commerce/
 ├── backend/                    # Spring Boot API
-│   └── src/main/java/com/shopcart/
+│   └── src/main/java/com/nexoracommerce/
 │       ├── ai/                 # 5 AI features
 │       ├── auth/               # JWT, login, register
 │       ├── checkout/           # Checkout flow + Redis lock
@@ -181,7 +181,7 @@ Xem file `.env.example` để biết tất cả biến. Các biến bắt buộc
 
 ```env
 # Database
-DB_URL=jdbc:postgresql://localhost:5432/shopcart
+DB_URL=jdbc:postgresql://localhost:5432/nexora_commerce
 DB_USERNAME=admin
 DB_PASSWORD=your_password
 

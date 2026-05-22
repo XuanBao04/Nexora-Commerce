@@ -147,7 +147,7 @@ export default function Order() {
         </div>
         <h1 className="text-xl font-extrabold text-zinc-950">Lịch sử đơn hàng trống</h1>
         <p className="mt-2 max-w-sm text-sm font-semibold leading-relaxed text-zinc-400">
-          Bạn chưa thực hiện bất kỳ giao dịch mua sắm nào cùng ShopCart.
+          Bạn chưa thực hiện bất kỳ giao dịch mua sắm nào cùng Nexora Commerce.
         </p>
         <a
           href="/authenticated/products"

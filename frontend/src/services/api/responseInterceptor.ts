@@ -1,5 +1,4 @@
 import { AxiosResponse } from 'axios';
-import { ApiResponse } from '../types/apiResponse';
 
 /**
  * Response Interceptor

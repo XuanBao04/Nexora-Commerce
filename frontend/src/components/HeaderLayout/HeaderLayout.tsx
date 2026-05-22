@@ -77,7 +77,7 @@ export default function HeaderLayout() {
               <FaStore className="h-4 w-4 text-amber-200" />
             </div>
             <span className="text-lg font-black tracking-tight text-zinc-950 sm:text-xl">
-              ShopCart <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block -mt-1">Aetheris</span>
+              Nexora <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block -mt-1">Aetheris</span>
             </span>
           </div>
 
@@ -184,7 +184,7 @@ export default function HeaderLayout() {
       <footer className="mt-auto border-t border-zinc-200/50 bg-white/40 backdrop-blur-sm py-8 transition-all duration-300">
         <div className="mx-auto max-w-7xl px-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-semibold text-zinc-400 sm:px-6 lg:px-8">
           <div>
-            © {new Date().getFullYear()} ShopCart. Design by Aetheris Concept. All rights reserved.
+            © {new Date().getFullYear()} Nexora Commerce. Design by Aetheris Concept. All rights reserved.
           </div>
           <div className="flex gap-4">
             <span className="hover:text-zinc-600 cursor-pointer transition">Điều khoản</span>
