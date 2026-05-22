@@ -5,13 +5,13 @@
          http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.shopcart</groupId>
-    <artifactId>shopcart-backend</artifactId>
+    <groupId>com.nexoracommerce</groupId>
+    <artifactId>nexora-commerce-backend</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
 
-    <name>ShopCart Backend API</name>
-    <description>REST API for ShopCart E-commerce System</description>
+    <name>Nexora Commerce Backend API</name>
+    <description>REST API for Nexora Commerce E-commerce System</description>
 
     <parent>
         <groupId>org.springframework.boot</groupId>

@@ -1,4 +1,4 @@
-name: shopcart
+name: nexora-commerce
 
 services:
   db:
@@ -14,7 +14,7 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - shopcart_net
+      - nexora_commerce_net
 
   redis:
     image: redis:7.4-alpine
@@ -30,7 +30,7 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - shopcart_net
+      - nexora_commerce_net
 
   backend:
     restart: unless-stopped
@@ -57,7 +57,7 @@ services:
       retries: 10
       start_period: 20s
     networks:
-      - shopcart_net
+      - nexora_commerce_net
 
   frontend:
     env_file:
@@ -65,7 +65,7 @@ services:
     depends_on:
       - backend
     networks:
-      - shopcart_net
+      - nexora_commerce_net
 
   k6:
     image: grafana/k6:latest
@@ -78,7 +78,7 @@ services:
       backend:
         condition: service_healthy
     networks:
-      - shopcart_net
+      - nexora_commerce_net
 
 volumes:
   postgres_data:
@@ -87,5 +87,5 @@ volumes:
   frontend_node_modules:
 
 networks:
-  shopcart_net:
-    name: shopcart_net
+  nexora_commerce_net:
+    name: nexora_commerce_net

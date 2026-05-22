@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { PaginationInfo } from '../../types/apiResponse';
+import { PaginationInfo } from '../types/apiResponse';
 
 /**
  * Hook for managing paginated API requests
