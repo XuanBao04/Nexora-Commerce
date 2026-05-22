@@ -1,8 +1,11 @@
 package com.nexoracommerce.coupon.service.impl;
 
 import com.nexoracommerce.constant.MessageConstant;
-
+import com.nexoracommerce.coupon.dto.request.CreateCouponRequest;
+import com.nexoracommerce.coupon.dto.request.UpdateCouponRequest;
+import com.nexoracommerce.coupon.dto.response.CouponResponse;
 import com.nexoracommerce.coupon.entity.Coupon;
+import com.nexoracommerce.coupon.mapper.CouponMapper;
 import com.nexoracommerce.common.exception.BusinessLogicException;
 import com.nexoracommerce.common.exception.ResourceNotFoundException;
 import com.nexoracommerce.coupon.repository.CouponRepository;
@@ -20,9 +23,12 @@ import java.util.Objects;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class CouponServiceImpl implements ICouponService {
     
     private final CouponRepository couponRepository;
+    private final CouponMapper couponMapper;
+    
     private static final ZoneId VN_TIMEZONE = ZoneId.of("Asia/Ho_Chi_Minh");
     private static final int MAX_DISCOUNT_PERCENT = 100;
     private static final int MIN_DISCOUNT_PERCENT = 1;
@@ -92,65 +98,54 @@ public class CouponServiceImpl implements ICouponService {
     }
 
     @Override
-    @Transactional
-    public Coupon createCoupon(Coupon coupon) {
-        Objects.requireNonNull(coupon, "Coupon cannot be null");
-        validateCouponCodeNotBlank(coupon.getCode());
-
-        validateDiscountPercent(coupon.getDiscountPercent());
-
-        // Set defaults
-        if (coupon.getActive() == null) {
-            coupon.setActive(true);
-        }
-
-        if (coupon.getMinimumOrderAmount() == null) {
-            coupon.setMinimumOrderAmount(0L);
-        }
-
-        LocalDateTime now = getCurrentTime();
-
-        return couponRepository.save(coupon);
-    }
-
-    @Override
-    public List<Coupon> getAllCoupons() {
-        return couponRepository.findAll();
+    public CouponResponse getCouponResponseByCode(String couponCode) {
+        return couponMapper.toResponse(getCouponByCode(couponCode));
     }
 
     @Override
     @Transactional
-    public Coupon updateCoupon(String code, Coupon coupon) {
-        Objects.requireNonNull(coupon, "Coupon update data cannot be null");
+    public CouponResponse createCoupon(CreateCouponRequest request) {
+        Objects.requireNonNull(request, "Coupon request cannot be null");
+        validateCouponCodeNotBlank(request.code());
+        validateDiscountPercent(request.discountPercent());
+        validateMinimumOrderAmount(request.minimumOrderAmount());
+        if (request.expiryDate() != null) {
+            validateExpiryDate(request.expiryDate());
+        }
+
+        Coupon coupon = couponMapper.toEntity(request);
+        Coupon saved = couponRepository.save(coupon);
+        return couponMapper.toResponse(saved);
+    }
+
+    @Override
+    public List<CouponResponse> getAllCoupons() {
+        return couponMapper.toResponseList(couponRepository.findAll());
+    }
+
+    @Override
+    @Transactional
+    public CouponResponse updateCoupon(String code, UpdateCouponRequest request) {
+        Objects.requireNonNull(request, "Coupon update request data cannot be null");
         validateCouponCodeNotBlank(code);
 
         Coupon existing = couponRepository.findById(code)
                 .orElseThrow(() -> new ResourceNotFoundException(MessageConstant.Coupon.NOT_FOUND + code));
 
-        // Update discount percent
-        if (coupon.getDiscountPercent() != null) {
-            validateDiscountPercent(coupon.getDiscountPercent());
-            existing.setDiscountPercent(coupon.getDiscountPercent());
+        if (request.discountPercent() != null) {
+            validateDiscountPercent(request.discountPercent());
+        }
+        if (request.minimumOrderAmount() != null) {
+            validateMinimumOrderAmount(request.minimumOrderAmount());
+        }
+        if (request.expiryDate() != null) {
+            validateExpiryDate(request.expiryDate());
         }
 
-        // Update active status
-        if (coupon.getActive() != null) {
-            existing.setActive(coupon.getActive());
-        }
+        couponMapper.updateEntityFromRequest(request, existing);
 
-        // Update minimum order amount
-        if (coupon.getMinimumOrderAmount() != null) {
-            validateMinimumOrderAmount(coupon.getMinimumOrderAmount());
-            existing.setMinimumOrderAmount(coupon.getMinimumOrderAmount());
-        }
-
-        // Update expiry date
-        if (coupon.getExpiryDate() != null) {
-            validateExpiryDate(coupon.getExpiryDate());
-            existing.setExpiryDate(coupon.getExpiryDate());
-        }
-
-        return couponRepository.save(existing);
+        Coupon saved = couponRepository.save(existing);
+        return couponMapper.toResponse(saved);
     }
 
     @Override

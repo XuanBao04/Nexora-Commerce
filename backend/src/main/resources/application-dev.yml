@@ -8,6 +8,7 @@ spring:
         format_sql: true
   flyway:
     enabled: true
+    repair: true
 
 logging:
   level:

@@ -6,18 +6,17 @@ import com.nexoracommerce.cart.entity.CartItem;
 import com.nexoracommerce.constant.MessageConstant;
 import com.nexoracommerce.common.exception.ResourceNotFoundException;
 import com.nexoracommerce.product.entity.Product;
-import org.springframework.stereotype.Component;
+import org.mapstruct.Mapper;
+import org.mapstruct.ReportingPolicy;
 
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
+public interface CartMapper {
 
-@Component
-public class CartMapper {
-
-   
-    public CartResponse toCartResponse(String userId, List<CartItem> items, Map<String, Product> productsById) {
+    default CartResponse toCartResponse(String userId, List<CartItem> items, Map<String, Product> productsById) {
         if (items == null) {
             items = java.util.Collections.emptyList();
         }
@@ -27,19 +26,18 @@ public class CartMapper {
                 .collect(Collectors.toList());
 
         Long totalPrice = itemResponses.stream()
-                .mapToLong(CartItemResponse::getTotalPrice)
+                .mapToLong(CartItemResponse::totalPrice)
                 .sum();
 
-        return CartResponse.builder()
-                .userId(userId)
-                .items(itemResponses)
-                .totalItems(items.size())
-                .totalPrice(totalPrice)
-                .build();
+        return new CartResponse(
+                userId,
+                itemResponses,
+                items.size(),
+                totalPrice
+        );
     }
 
-    
-    public CartItemResponse toCartItemResponse(CartItem item, Map<String, Product> productsById) {
+    default CartItemResponse toCartItemResponse(CartItem item, Map<String, Product> productsById) {
         Product product = productsById.get(item.getProductId());
         if (product == null) {
             throw new ResourceNotFoundException(MessageConstant.Product.NOT_FOUND + item.getProductId());
@@ -48,27 +46,24 @@ public class CartMapper {
         Long price = product.getPrice();
         Long totalPrice = price * item.getQuantity();
 
-        return CartItemResponse.builder()
-                .id(item.getId())
-                .productId(item.getProductId())
-                .quantity(item.getQuantity())
-                .price(price)
-                .totalPrice(totalPrice)
-                .createdAt(item.getCreatedAt())
-                .build();
+        return new CartItemResponse(
+                item.getId(),
+                item.getProductId(),
+                item.getQuantity(),
+                price,
+                totalPrice,
+                item.getCreatedAt()
+        );
     }
 
-    /**
-     * Build CartResponse from Redis Hash data (productId → quantity).
-     */
-    public CartResponse toCartResponseFromRedis(String userId, Map<String, Integer> redisCart, Map<String, Product> productsById) {
+    default CartResponse toCartResponseFromRedis(String userId, Map<String, Integer> redisCart, Map<String, Product> productsById) {
         if (redisCart == null || redisCart.isEmpty()) {
-            return CartResponse.builder()
-                    .userId(userId)
-                    .items(java.util.Collections.emptyList())
-                    .totalItems(0)
-                    .totalPrice(0L)
-                    .build();
+            return new CartResponse(
+                    userId,
+                    java.util.Collections.emptyList(),
+                    0,
+                    0L
+            );
         }
 
         List<CartItemResponse> itemResponses = redisCart.entrySet().stream()
@@ -83,36 +78,37 @@ public class CartMapper {
                     Long price = product.getPrice();
                     Long totalPrice = price * quantity;
 
-                    return CartItemResponse.builder()
-                            .id(null) // No DB ID in Redis mode
-                            .productId(productId)
-                            .quantity(quantity)
-                            .price(price)
-                            .totalPrice(totalPrice)
-                            .createdAt(null)
-                            .build();
+                    return new CartItemResponse(
+                            null, // No DB ID in Redis mode
+                            productId,
+                            quantity,
+                            price,
+                            totalPrice,
+                            null
+                    );
                 })
                 .collect(Collectors.toList());
 
         Long totalPrice = itemResponses.stream()
-                .mapToLong(CartItemResponse::getTotalPrice)
+                .mapToLong(CartItemResponse::totalPrice)
                 .sum();
 
-        return CartResponse.builder()
-                .userId(userId)
-                .items(itemResponses)
-                .totalItems(redisCart.size())
-                .totalPrice(totalPrice)
-                .build();
+        return new CartResponse(
+                userId,
+                itemResponses,
+                redisCart.size(),
+                totalPrice
+        );
     }
 
-   
-    public CartItem toEntity(CartItemResponse response) {
+    default CartItem toEntity(CartItemResponse response) {
+        if (response == null) {
+            return null;
+        }
         return CartItem.builder()
-                .id(response.getId())
-                .variant(response.getProductId() != null ? com.nexoracommerce.product.entity.ProductVariant.builder().sku(response.getProductId()).build() : null)
-                .quantity(response.getQuantity())
+                .id(response.id())
+                .variant(response.productId() != null ? com.nexoracommerce.product.entity.ProductVariant.builder().sku(response.productId()).build() : null)
+                .quantity(response.quantity())
                 .build();
     }
 }
-

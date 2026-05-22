@@ -6,7 +6,6 @@ import com.nexoracommerce.auth.dto.request.LoginRequest;
 import com.nexoracommerce.auth.dto.request.RegisterRequest;
 import com.nexoracommerce.auth.dto.response.AuthResponse;
 import com.nexoracommerce.user.entity.User;
-import com.nexoracommerce.common.enums.UserRole;
 import com.nexoracommerce.common.exception.BusinessLogicException;
 import com.nexoracommerce.common.exception.InvalidInputException;
 import com.nexoracommerce.common.exception.ResourceNotFoundException;
@@ -21,12 +20,14 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Service implementation for Authentication operations
  */
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class AuthServiceImpl implements IAuthService {
 
     private final UserRepository userRepository;
@@ -41,11 +42,11 @@ public class AuthServiceImpl implements IAuthService {
 
     @Override
     public AuthResponse login(LoginRequest request) {
-        User user = userRepository.findByUsername(request.getUsername())
+        User user = userRepository.findByUsername(request.username())
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        MessageConstant.Auth.USER_NOT_FOUND + request.getUsername()));
+                        MessageConstant.Auth.USER_NOT_FOUND + request.username()));
 
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+        if (!passwordEncoder.matches(request.password(), user.getPassword())) {
             throw new InvalidInputException(MessageConstant.Auth.INVALID_PASSWORD);
         }
 
@@ -58,31 +59,29 @@ public class AuthServiceImpl implements IAuthService {
         String redisKey = "refresh_token:" + refreshToken;
         redisTemplate.opsForValue().set(redisKey, user.getUsername(), refreshTokenExpirationMs, java.util.concurrent.TimeUnit.MILLISECONDS);
 
-        AuthResponse response = toAuthResponse(user, MessageConstant.Auth.LOGIN_SUCCESS);
-        response.setToken(accessToken);
-        response.setRefreshToken(refreshToken);
-        return response;
+        return toAuthResponse(user, MessageConstant.Auth.LOGIN_SUCCESS, accessToken, refreshToken);
     }
 
     @Override
+    @Transactional
     public AuthResponse register(RegisterRequest request) {
-        if (userRepository.existsByUsername(request.getUsername())) {
+        if (userRepository.existsByUsername(request.username())) {
             throw new BusinessLogicException(
-                    MessageConstant.Auth.USERNAME_EXISTS + request.getUsername());
+                    MessageConstant.Auth.USERNAME_EXISTS + request.username());
         }
 
-        if (request.getEmail() != null && userRepository.existsByEmail(request.getEmail())) {
-            throw new BusinessLogicException("Email already exists: " + request.getEmail());
+        if (request.email() != null && userRepository.existsByEmail(request.email())) {
+            throw new BusinessLogicException("Email already exists: " + request.email());
         }
 
         Role customerRole = roleRepository.findByName("ROLE_CUSTOMER")
                 .orElseGet(() -> roleRepository.save(Role.builder().name("ROLE_CUSTOMER").build()));
 
         User user = User.builder()
-                .username(request.getUsername())
-                .password(passwordEncoder.encode(request.getPassword()))
-                .fullName(request.getFullName())
-                .email(request.getEmail())
+                .username(request.username())
+                .password(passwordEncoder.encode(request.password()))
+                .fullName(request.fullName())
+                .email(request.email())
                 .roles(java.util.Set.of(customerRole))
                 .build();
 
@@ -139,17 +138,17 @@ public class AuthServiceImpl implements IAuthService {
         String newRedisKey = "refresh_token:" + newRefreshToken;
         redisTemplate.opsForValue().set(newRedisKey, username, refreshTokenExpirationMs, java.util.concurrent.TimeUnit.MILLISECONDS);
 
-        AuthResponse response = toAuthResponse(user, "Token refreshed successfully");
-        response.setToken(newAccessToken);
-        response.setRefreshToken(newRefreshToken);
-
-        return response;
+        return toAuthResponse(user, "Token refreshed successfully", newAccessToken, newRefreshToken);
     }
 
     /**
      * Convert User entity to AuthResponse DTO
      */
     private AuthResponse toAuthResponse(User user, String message) {
+        return toAuthResponse(user, message, null, null);
+    }
+
+    private AuthResponse toAuthResponse(User user, String message, String token, String refreshToken) {
         String roleStr = user.getRoles().stream()
                 .map(Role::getName)
                 .findFirst()
@@ -162,6 +161,8 @@ public class AuthServiceImpl implements IAuthService {
                 .email(user.getEmail())
                 .role(roleStr)
                 .message(message)
+                .token(token)
+                .refreshToken(refreshToken)
                 .build();
     }
 

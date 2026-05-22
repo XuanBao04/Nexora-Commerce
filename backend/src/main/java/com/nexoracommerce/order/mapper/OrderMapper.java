@@ -4,15 +4,17 @@ import com.nexoracommerce.order.dto.response.OrderResponse;
 import com.nexoracommerce.order.dto.response.OrderItemResponse;
 import com.nexoracommerce.order.entity.Order;
 import com.nexoracommerce.order.entity.OrderItem;
-import org.springframework.stereotype.Component;
+import org.mapstruct.Mapper;
+import org.mapstruct.ReportingPolicy;
 
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
-@Component
-public class OrderMapper {
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
+public interface OrderMapper {
 
-    public OrderResponse toOrderResponse(Order order) {
+    default OrderResponse toOrderResponse(Order order) {
         if (order == null) {
             return null;
         }
@@ -24,43 +26,55 @@ public class OrderMapper {
                 : java.util.Collections.emptyList();
 
         long subtotal = itemResponses.stream()
-                .mapToLong(item -> item.getPrice() * item.getQuantity())
+                .mapToLong(item -> item.price() * item.quantity())
                 .sum();
 
-        return OrderResponse.builder()
-                .id(order.getId())
-                .userId(order.getUser() != null ? order.getUser().getId().toString() : null)
-                .items(itemResponses)
-                .subtotal(subtotal)
-                .discountAmount(order.getDiscountAmount() != null ? order.getDiscountAmount() : 0L)
-                .couponCode(order.getCoupon() != null ? order.getCoupon().getCode() : null)
-                .shippingFee(order.getShippingFee())
-                .totalPrice(order.getTotalPrice())
-                .status(order.getStatus() != null ? order.getStatus().toString() : null)
-                .createdAt(order.getCreatedAt())
-                .lastModifiedDate(order.getLastModifiedDate())
-                .shippingAddress(order.getShippingAddress())
-                .phoneNumber(order.getPhoneNumber())
-                .build();
+        return new OrderResponse(
+                order.getId(),
+                order.getUser() != null ? order.getUser().getId().toString() : null,
+                itemResponses,
+                subtotal,
+                order.getDiscountAmount() != null ? order.getDiscountAmount() : 0L,
+                order.getShippingFee(),
+                order.getTotalPrice(),
+                order.getCoupon() != null ? order.getCoupon().getCode() : null,
+                order.getStatus() != null ? order.getStatus().toString() : null,
+                order.getCreatedAt(),
+                order.getLastModifiedDate(),
+                order.getShippingAddress(),
+                null,
+                null,
+                null,
+                null,
+                order.getPhoneNumber()
+        );
     }
 
-   
-    public OrderItemResponse toOrderItemResponse(OrderItem item) {
-        return OrderItemResponse.builder()
-                .id(item.getId())
-                .productId(item.getProductId())
-                .quantity(item.getQuantity())
-                .price(item.getPrice())
-                .build();
+    default OrderItemResponse toOrderItemResponse(OrderItem item) {
+        if (item == null) {
+            return null;
+        }
+        return new OrderItemResponse(
+                item.getId(),
+                item.getProductId(),
+                item.getQuantity(),
+                item.getPrice()
+        );
     }
 
-   
-    public OrderItem toEntity(OrderItemResponse response) {
+    default OrderItem toEntity(OrderItemResponse response) {
+        if (response == null) {
+            return null;
+        }
         return OrderItem.builder()
-                .id(response.getId())
-                .variant(response.getProductId() != null ? com.nexoracommerce.product.entity.ProductVariant.builder().sku(response.getProductId()).build() : null)
-                .quantity(response.getQuantity())
-                .price(response.getPrice())
+                .id(response.id())
+                .variant(response.productId() != null ? com.nexoracommerce.product.entity.ProductVariant.builder().sku(response.productId()).build() : null)
+                .quantity(response.quantity())
+                .price(response.price())
                 .build();
     }
+
+    List<OrderResponse> toResponseList(List<Order> orders);
+
+    Set<OrderResponse> toResponseSet(Set<Order> orders);
 }

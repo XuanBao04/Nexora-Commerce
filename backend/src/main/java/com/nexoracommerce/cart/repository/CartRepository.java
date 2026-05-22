@@ -2,11 +2,13 @@ package com.nexoracommerce.cart.repository;
 import com.nexoracommerce.common.repository.BaseRepository;
 import com.nexoracommerce.cart.entity.CartItem;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 @Repository
+@Transactional(readOnly = true)
 public interface CartRepository extends BaseRepository<CartItem, Long> {
     List<CartItem> findByUser_IdOrderByCreatedAtDesc(UUID userId);
     Optional<CartItem> findByUser_IdAndVariant_Sku(UUID userId, String sku);

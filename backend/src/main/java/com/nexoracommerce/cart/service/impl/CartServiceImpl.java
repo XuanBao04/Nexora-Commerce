@@ -14,6 +14,7 @@ import com.nexoracommerce.product.repository.ProductRepository;
 import com.nexoracommerce.product.service.IProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,6 +27,7 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class CartServiceImpl implements ICartService {
 
     private final RedisCartService redisCartService;
@@ -42,13 +44,13 @@ public class CartServiceImpl implements ICartService {
     @Override
     public CartResponse addToCart(String userId, CartItemRequest request) {
         // Kiểm tra sản phẩm có tồn tại không
-        productService.getProductById(request.getProductId());
+        productService.getProductById(request.productId());
 
         // Reserve stock trước khi cập nhật giỏ hàng (sẽ ném exception nếu không đủ hàng)
-        inventoryService.reserveStock(request.getProductId(), request.getQuantity());
+        inventoryService.reserveStock(request.productId(), request.quantity());
 
         // Thêm vào Redis (HINCRBY — tự tăng nếu đã tồn tại)
-        redisCartService.addItem(userId, request.getProductId(), request.getQuantity());
+        redisCartService.addItem(userId, request.productId(), request.quantity());
 
         return buildCartResponse(userId);
     }

@@ -12,7 +12,7 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class RedisStockService {
+public class RedisStockService implements IRedisStockService {
 
     private final RedisTemplate<String, Object> redisTemplate;
     

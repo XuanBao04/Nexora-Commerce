@@ -29,8 +29,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -42,6 +40,7 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class OrderServiceImpl implements IOrderService {
 
     private final OrderRepository orderRepository;
@@ -61,14 +60,14 @@ public class OrderServiceImpl implements IOrderService {
         Map<String, Product> productMap = validateOrderItems(request);
 
         // 2. Calculate price using DB prices, not client prices
-        long subtotal = calculateSubtotalFromProducts(request.getOrderItems(), productMap);
+        long subtotal = calculateSubtotalFromProducts(request.orderItems(), productMap);
 
         // 3. Validate và apply coupon
         long discountAmount = 0L;
         String couponCode = null;
-        if (request.getCouponCode() != null && !request.getCouponCode().trim().isEmpty()) {
-            discountAmount = couponService.calculateDiscount(request.getCouponCode(), subtotal);
-            couponCode = request.getCouponCode();
+        if (request.couponCode() != null && !request.couponCode().trim().isEmpty()) {
+            discountAmount = couponService.calculateDiscount(request.couponCode(), subtotal);
+            couponCode = request.couponCode();
         }
         long actualDiscount = Math.min(subtotal, discountAmount);
         long totalPrice = subtotal - actualDiscount + SHIPPING_FEE;
@@ -87,8 +86,8 @@ public class OrderServiceImpl implements IOrderService {
                 .shippingFee(SHIPPING_FEE)
                 .discountAmount(actualDiscount)
                 .coupon(couponCode != null ? com.nexoracommerce.coupon.entity.Coupon.builder().code(couponCode).build() : null)
-                .shippingAddress(request.getShippingAddress())
-                .phoneNumber(request.getPhoneNumber())
+                .shippingAddress(request.shippingAddress())
+                .phoneNumber(request.phoneNumber())
                 .status(OrderStatus.PENDING)
                 .createdAt(now)
                 .lastModifiedDate(now)
@@ -97,15 +96,15 @@ public class OrderServiceImpl implements IOrderService {
 
         // 6. Add order items with DB prices and reserve inventory
         try {
-            for (OrderItemRequest itemRequest : request.getOrderItems()) {
+            for (OrderItemRequest itemRequest : request.orderItems()) {
                 // Reserve stock for order
-                inventoryService.reserveStock(itemRequest.getProductId(), itemRequest.getQuantity());
+                inventoryService.reserveStock(itemRequest.productId(), itemRequest.quantity());
 
                 // Use DB price, not client price
-                Product product = productMap.get(itemRequest.getProductId());
+                Product product = productMap.get(itemRequest.productId());
                 OrderItem orderItem = OrderItem.builder()
-                        .variant(com.nexoracommerce.product.entity.ProductVariant.builder().sku(itemRequest.getProductId()).build())
-                        .quantity(itemRequest.getQuantity())
+                        .variant(com.nexoracommerce.product.entity.ProductVariant.builder().sku(itemRequest.productId()).build())
+                        .quantity(itemRequest.quantity())
                         .price(product.getPrice())
                         .order(order)
                         .build();
@@ -128,7 +127,6 @@ public class OrderServiceImpl implements IOrderService {
         }
     }
     @Override
-    @Transactional(readOnly = true)
     public List<OrderResponse> getAllOrders(){
         List<Order> orders = orderRepository.findAllWithItems();
         return orders.stream()
@@ -137,14 +135,12 @@ public class OrderServiceImpl implements IOrderService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public Page<OrderResponse> getAllOrdersPageable(Pageable pageable) {
         Page<Order> orderPage = orderRepository.findAllWithItemsPageable(pageable);
         return orderPage.map(orderMapper::toOrderResponse);
     }
 
     @Override
-    @Transactional(readOnly = true)
     public OrderResponse getOrderById(String orderId) {
         Order order = orderRepository.findByIdWithItems(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException(MessageConstant.Order.NOT_FOUND + orderId));
@@ -152,7 +148,6 @@ public class OrderServiceImpl implements IOrderService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public List<OrderResponse> getUserOrders(String userId) {
         List<Order> orders = orderRepository.findByUserIdOrderByCreatedAtDescWithItems(java.util.UUID.fromString(userId));
         return orders.stream()
@@ -161,7 +156,6 @@ public class OrderServiceImpl implements IOrderService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public Page<OrderResponse> getUserOrdersPageable(String userId, Pageable pageable) {
         Page<Order> orderPage = orderRepository.findByUserIdWithItemsPageable(java.util.UUID.fromString(userId), pageable);
         return orderPage.map(orderMapper::toOrderResponse);
@@ -232,40 +226,41 @@ public class OrderServiceImpl implements IOrderService {
         Map<String, Product> productMap = validateOrderItems(request);
 
         // Calculate price using DB prices, not client prices
-        long subtotal = calculateSubtotalFromProducts(request.getOrderItems(), productMap);
+        long subtotal = calculateSubtotalFromProducts(request.orderItems(), productMap);
 
         // Validate and apply coupon
         long discountAmount = 0L;
         String couponCode = null;
-        if (request.getCouponCode() != null && !request.getCouponCode().trim().isEmpty()) {
-            discountAmount = couponService.calculateDiscount(request.getCouponCode(), subtotal);
-            couponCode = request.getCouponCode();
+        if (request.couponCode() != null && !request.couponCode().trim().isEmpty()) {
+            discountAmount = couponService.calculateDiscount(request.couponCode(), subtotal);
+            couponCode = request.couponCode();
         }
         
         long actualDiscount = Math.min(subtotal, discountAmount);
         long totalPrice = subtotal - actualDiscount + SHIPPING_FEE;
 
         // Build preview items with DB prices
-        List<OrderItemResponse> previewItems = request.getOrderItems().stream()
+        List<OrderItemResponse> previewItems = request.orderItems().stream()
                 .map(item -> {
-                    Product product = productMap.get(item.getProductId());
-                    return OrderItemResponse.builder()
-                            .productId(item.getProductId())
-                            .quantity(item.getQuantity())
-                            .price(product.getPrice())
-                            .build();
+                    Product product = productMap.get(item.productId());
+                    return new OrderItemResponse(
+                            null,
+                            item.productId(),
+                            item.quantity(),
+                            product.getPrice()
+                    );
                 })
                 .toList();
 
-        return OrderPreviewResponse.builder()
-                .userId(request.getUserId())
-                .items(previewItems)
-                .subtotal(subtotal)
-                .discountAmount(actualDiscount)
-                .couponCode(couponCode)
-                .shippingFee(SHIPPING_FEE)
-                .totalPrice(totalPrice)
-                .build();
+        return new OrderPreviewResponse(
+                request.userId(),
+                previewItems,
+                subtotal,
+                actualDiscount,
+                SHIPPING_FEE,
+                totalPrice,
+                couponCode
+        );
     }
 
     // ======================== Private Helper Methods ========================
@@ -276,15 +271,15 @@ public class OrderServiceImpl implements IOrderService {
      * SECURITY: Fetch products from DB to verify prices and availability.
      */
     private Map<String, Product> validateOrderItems(OrderRequest request) {
-    if (request.getOrderItems() == null || request.getOrderItems().isEmpty()) {
+    if (request.orderItems() == null || request.orderItems().isEmpty()) {
         throw new BusinessLogicException(MessageConstant.Order.EMPTY_ITEMS);
     }
 
     // 1. Tổng hợp số lượng yêu cầu theo ID sản phẩm
-    Map<String, Integer> requiredQtyByProductId = request.getOrderItems().stream()
+    Map<String, Integer> requiredQtyByProductId = request.orderItems().stream()
             .collect(Collectors.groupingBy(
-                    OrderItemRequest::getProductId,
-                    Collectors.summingInt(OrderItemRequest::getQuantity)
+                    OrderItemRequest::productId,
+                    Collectors.summingInt(OrderItemRequest::quantity)
             ));
 
     Set<String> productIds = requiredQtyByProductId.keySet();
@@ -336,7 +331,7 @@ public class OrderServiceImpl implements IOrderService {
      */
     private long calculateSubtotal(List<OrderItemRequest> items) {
         return items.stream()
-                .mapToLong(item -> item.getPrice() * item.getQuantity())
+                .mapToLong(item -> item.price() * item.quantity())
                 .sum();
     }
 
@@ -347,8 +342,8 @@ public class OrderServiceImpl implements IOrderService {
     private long calculateSubtotalFromProducts(List<OrderItemRequest> items, Map<String, Product> productMap) {
         return items.stream()
                 .mapToLong(item -> {
-                    Product product = productMap.get(item.getProductId());
-                    return product.getPrice() * item.getQuantity();
+                    Product product = productMap.get(item.productId());
+                    return product.getPrice() * item.quantity();
                 })
                 .sum();
     }

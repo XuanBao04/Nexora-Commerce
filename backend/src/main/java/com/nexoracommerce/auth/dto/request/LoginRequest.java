@@ -1,21 +1,16 @@
 package com.nexoracommerce.auth.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.Builder;
 
 /**
  * Request DTO for user login
  */
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class LoginRequest {
-
+@Builder
+public record LoginRequest(
     @NotBlank(message = "Username is required")
-    private String username;
+    String username,
 
     @NotBlank(message = "Password is required")
-    private String password;
-}
+    String password
+) {}

@@ -1,7 +1,6 @@
 package com.nexoracommerce.product.service;
 
-import com.nexoracommerce.cart.dto.response.CartItemResponse;
-import com.nexoracommerce.product.entity.Product;
+import com.nexoracommerce.product.dto.request.ProductFormRequest;
 import com.nexoracommerce.product.dto.response.ProductResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -14,38 +13,38 @@ public interface IProductService {
 
     /**
      * Get all products
-     * @return list of Product
+     * @return list of ProductResponse
      */
-    List<Product> getAllProducts();
+    List<ProductResponse> getAllProducts();
 
     /**
      * Get all products with pagination
      * @param pageable pagination parameters
-     * @return Page of Product
+     * @return Page of ProductResponse
      */
-    Page<Product> getAllProductsPageable(Pageable pageable);
+    Page<ProductResponse> getAllProductsPageable(Pageable pageable);
 
     /**
      * Get product by ID
      * @param productId the product ID
-     * @return Product
+     * @return ProductResponse
      */
-    Product getProductById(String productId);
+    ProductResponse getProductById(String productId);
 
     /**
      * Search products by name
      * @param keyword search keyword
-     * @return list of matching products
+     * @return list of matching ProductResponse
      */
-    List<Product> searchProductsByName(String keyword);
+    List<ProductResponse> searchProductsByName(String keyword);
 
     /**
      * Search products by keyword with pagination
      * @param keyword search keyword
      * @param pageable pagination parameters
-     * @return Page of Product
+     * @return Page of ProductResponse
      */
-    Page<Product> searchProductsByNamePageable(String keyword, Pageable pageable);
+    Page<ProductResponse> searchProductsByNamePageable(String keyword, Pageable pageable);
 
     /**
      * Get available stock for a product
@@ -64,9 +63,9 @@ public interface IProductService {
     /**
      * Get product with inventory details
      * @param productId the product ID
-     * @return Product
+     * @return ProductResponse
      */
-    Product getProductWithInventory(String productId);
+    ProductResponse getProductWithInventory(String productId);
 
     /**
      * Delete all products
@@ -77,17 +76,17 @@ public interface IProductService {
     /**
      * Create a new product
      * @param request the product request
-     * @return created Product
+     * @return created ProductResponse
      */
-    Product createProduct(com.nexoracommerce.product.dto.request.ProductFormRequest request);
+    ProductResponse createProduct(ProductFormRequest request);
 
     /**
      * Update an existing product
      * @param productId the product ID
      * @param request the product request
-     * @return updated Product
+     * @return updated ProductResponse
      */
-    Product updateProduct(String productId, com.nexoracommerce.product.dto.request.ProductFormRequest request);
+    ProductResponse updateProduct(String productId, ProductFormRequest request);
 
     /**
      * Delete a product by ID

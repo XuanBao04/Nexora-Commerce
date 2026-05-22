@@ -23,6 +23,15 @@ CREATE SEQUENCE IF NOT EXISTS product_reviews_id_seq START WITH 1 INCREMENT BY 1
 CREATE SEQUENCE IF NOT EXISTS review_images_id_seq START WITH 1 INCREMENT BY 1;
 CREATE SEQUENCE IF NOT EXISTS ai_chat_messages_id_seq START WITH 1 INCREMENT BY 1;
 
+-- Hàm phục vụ trigger tự động cập nhật thời gian sửa đổi cho PostgreSQL
+CREATE OR REPLACE FUNCTION update_order_last_modified()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.last_modified_date = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 -- =========================================================================
 -- PHÂN HỆ 1: NGƯỜI DÙNG & BẢO MẬT (6 TABLES)
 -- =========================================================================
@@ -132,10 +141,10 @@ CREATE TABLE IF NOT EXISTS product_attribute_values (
 CREATE TABLE IF NOT EXISTS product_variants (
     sku VARCHAR(50) PRIMARY KEY, -- Custom SKU (e.g. 'IP15-BLK-128')
     product_id VARCHAR(50) NOT NULL,
-    price BIGINT NOT NULL,
-    quantity INTEGER NOT NULL DEFAULT 0,
-    reserved_quantity INTEGER NOT NULL DEFAULT 0,
-    sold_quantity INTEGER NOT NULL DEFAULT 0,
+    price BIGINT NOT NULL CONSTRAINT chk_variant_price CHECK (price >= 0),
+    quantity INTEGER NOT NULL DEFAULT 0 CONSTRAINT chk_variant_qty CHECK (quantity >= 0),
+    reserved_quantity INTEGER NOT NULL DEFAULT 0 CONSTRAINT chk_variant_reserved CHECK (reserved_quantity >= 0),
+    sold_quantity INTEGER NOT NULL DEFAULT 0 CONSTRAINT chk_variant_sold CHECK (sold_quantity >= 0),
     embedding vector(768), -- Embedding vector for Semantic Search using Gemini text-embedding-004
     CONSTRAINT fk_variants_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
 );
@@ -169,7 +178,7 @@ CREATE TABLE IF NOT EXISTS cart_items (
     id BIGINT PRIMARY KEY DEFAULT nextval('cart_items_id_seq'),
     user_id UUID NOT NULL,
     variant_sku VARCHAR(50) NOT NULL,
-    quantity INTEGER NOT NULL,
+    quantity INTEGER NOT NULL CONSTRAINT chk_cart_quantity CHECK (quantity > 0),
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_cart_items_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT fk_cart_items_variant FOREIGN KEY (variant_sku) REFERENCES product_variants(sku) ON DELETE CASCADE,
@@ -194,9 +203,9 @@ CREATE TABLE IF NOT EXISTS wishlists (
 -- 17. Table: coupons
 CREATE TABLE IF NOT EXISTS coupons (
     code VARCHAR(50) PRIMARY KEY,
-    discount_percent INTEGER NOT NULL,
+    discount_percent INTEGER NOT NULL CONSTRAINT chk_coupon_percent CHECK (discount_percent > 0 AND discount_percent <= 100),
     active BOOLEAN NOT NULL DEFAULT TRUE,
-    minimum_order_amount BIGINT NOT NULL DEFAULT 0,
+    minimum_order_amount BIGINT NOT NULL DEFAULT 0 CONSTRAINT chk_coupon_min_amount CHECK (minimum_order_amount >= 0),
     expiry_date TIMESTAMP
 );
 
@@ -204,9 +213,9 @@ CREATE TABLE IF NOT EXISTS coupons (
 CREATE TABLE IF NOT EXISTS orders (
     id VARCHAR(50) PRIMARY KEY, -- Custom Order ID (e.g. 'ORD-1001')
     user_id UUID NOT NULL,
-    total_price BIGINT NOT NULL,
-    shipping_fee BIGINT NOT NULL DEFAULT 0,
-    discount_amount BIGINT NOT NULL DEFAULT 0,
+    total_price BIGINT NOT NULL CONSTRAINT chk_order_total CHECK (total_price >= 0),
+    shipping_fee BIGINT NOT NULL DEFAULT 0 CONSTRAINT chk_order_shipping CHECK (shipping_fee >= 0),
+    discount_amount BIGINT NOT NULL DEFAULT 0 CONSTRAINT chk_order_discount CHECK (discount_amount >= 0),
     coupon_code VARCHAR(50),
     shipping_address VARCHAR(255) NOT NULL,
     phone_number VARCHAR(20) NOT NULL,
@@ -222,8 +231,8 @@ CREATE TABLE IF NOT EXISTS order_items (
     id BIGINT PRIMARY KEY DEFAULT nextval('order_items_id_seq'),
     order_id VARCHAR(50) NOT NULL,
     variant_sku VARCHAR(50) NOT NULL,
-    quantity INTEGER NOT NULL,
-    price BIGINT NOT NULL, -- Price snapshot at checkout
+    quantity INTEGER NOT NULL CONSTRAINT chk_order_item_qty CHECK (quantity > 0),
+    price BIGINT NOT NULL CONSTRAINT chk_order_item_price CHECK (price >= 0), -- Price snapshot at checkout
     CONSTRAINT fk_order_items_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
     CONSTRAINT fk_order_items_variant FOREIGN KEY (variant_sku) REFERENCES product_variants(sku) ON DELETE RESTRICT
 );
@@ -244,7 +253,7 @@ CREATE TABLE IF NOT EXISTS payment_transactions (
     id BIGINT PRIMARY KEY DEFAULT nextval('payment_transactions_id_seq'),
     order_id VARCHAR(50) NOT NULL,
     payment_method VARCHAR(50) NOT NULL, -- 'COD', 'VNPAY', 'MOMO'
-    amount BIGINT NOT NULL,
+    amount BIGINT NOT NULL CONSTRAINT chk_payment_amount CHECK (amount >= 0),
     provider_transaction_id VARCHAR(255), -- Reference ID from payment provider
     status VARCHAR(50) NOT NULL, -- 'PENDING', 'SUCCESS', 'FAILED'
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -259,14 +268,14 @@ CREATE TABLE IF NOT EXISTS payment_transactions (
 CREATE TABLE IF NOT EXISTS product_reviews (
     id BIGINT PRIMARY KEY DEFAULT nextval('product_reviews_id_seq'),
     user_id UUID NOT NULL,
-    product_id VARCHAR(50) NOT NULL,
+    variant_sku VARCHAR(50) NOT NULL, -- ĐÃ SỬA: Đổi từ product_id sang variant_sku để map chính xác sản phẩm thực tế cơ sở dữ liệu mua hàng
     order_id VARCHAR(50), -- Linked to verified purchase
-    rating INTEGER NOT NULL,
+    rating INTEGER NOT NULL CONSTRAINT chk_review_rating CHECK (rating >= 1 AND rating <= 5),
     comment TEXT,
     parent_id BIGINT, -- Self reference for Admin replies
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_reviews_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    CONSTRAINT fk_reviews_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+    CONSTRAINT fk_reviews_variant FOREIGN KEY (variant_sku) REFERENCES product_variants(sku) ON DELETE CASCADE, -- ĐÃ SỬA ràng buộc khóa ngoại
     CONSTRAINT fk_reviews_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL,
     CONSTRAINT fk_reviews_parent FOREIGN KEY (parent_id) REFERENCES product_reviews(id) ON DELETE CASCADE
 );
@@ -290,7 +299,17 @@ CREATE TABLE IF NOT EXISTS ai_chat_messages (
     CONSTRAINT fk_ai_messages_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
--- Create index for performance on key search columns
+-- =========================================================================
+-- TRIGGERS & INDEXES OPTIMIZATION
+-- =========================================================================
+
+-- Tự động hóa cập nhật thời gian sửa đổi cho bảng orders
+CREATE OR REPLACE TRIGGER tg_orders_last_modified
+    BEFORE UPDATE ON orders
+    FOR EACH ROW
+    EXECUTE FUNCTION update_order_last_modified();
+
+-- Tạo các chỉ mục tối ưu hiệu năng tìm kiếm nâng cao
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id);
 CREATE INDEX IF NOT EXISTS idx_products_brand ON products(brand_id);
 CREATE INDEX IF NOT EXISTS idx_variants_product ON product_variants(product_id);
@@ -298,3 +317,5 @@ CREATE INDEX IF NOT EXISTS idx_cart_items_user ON cart_items(user_id);
 CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(user_id);
 CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id);
 CREATE INDEX IF NOT EXISTS idx_ai_chat_session ON ai_chat_messages(session_id);
+-- Bổ sung index hỗn hợp tối ưu việc kiểm tra điều kiện áp dụng coupon
+CREATE INDEX IF NOT EXISTS idx_coupons_active_expiry ON coupons(active, expiry_date);

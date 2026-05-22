@@ -1,11 +1,18 @@
 package com.nexoracommerce.product.entity;
 
+import com.nexoracommerce.brand.entity.Brand;
+import com.nexoracommerce.category.entity.Category;
 import jakarta.persistence.*;
+import org.hibernate.annotations.BatchSize;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,13 +22,21 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@EqualsAndHashCode(of = "id")
+@ToString(exclude = {"category", "brand", "variants", "images"})
 @Entity
-@Table(name = "products")
+@Table(name = "products", indexes = {
+    @Index(name = "idx_products_category", columnList = "category_id"),
+    @Index(name = "idx_products_brand", columnList = "brand_id")
+})
 public class Product {
     @Id
+    @NotBlank(message = "Product ID is required")
+    @Size(max = 50, message = "Product ID must not exceed 50 characters")
     @Column(name = "id", length = 50)
     private String id;
 
+    @NotBlank(message = "Product name is required")
     @Column(nullable = false)
     private String name;
 
@@ -36,11 +51,13 @@ public class Product {
     @JoinColumn(name = "brand_id")
     private Brand brand;
 
-    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
+    @BatchSize(size = 20)
     @Builder.Default
     private List<ProductVariant> variants = new ArrayList<>();
 
-    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
+    @BatchSize(size = 20)
     @Builder.Default
     private List<ProductImage> images = new ArrayList<>();
 

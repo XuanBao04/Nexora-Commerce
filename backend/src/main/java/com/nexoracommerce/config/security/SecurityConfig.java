@@ -71,13 +71,21 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         // Public endpoints - no authentication required
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
-                        .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/refresh").permitAll()
-                        .requestMatchers("/api/auth/logout").permitAll()
-                        .requestMatchers("/api/products/**").permitAll()
-                        .requestMatchers("/api/inventory/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/coupons/**").permitAll()
-                        .requestMatchers("/api/cart/**").authenticated()
-                        .requestMatchers("/api/orders/**").authenticated()
+                        .requestMatchers("/api/v1/csrf-tokens").permitAll()
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/v1/authentications/sessions",
+                                "/api/v1/authentications/registrations",
+                                "/api/v1/authentications/tokens").permitAll()
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/authentications/sessions").permitAll()
+                        .requestMatchers("/api/v1/products/**").permitAll()
+                        .requestMatchers("/api/v1/security-demos/**").permitAll()
+                        .requestMatchers("/api/v1/inventories/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/brands/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/categories/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/coupons/**").permitAll()
+                        .requestMatchers("/api/v1/carts/**").authenticated()
+                        .requestMatchers("/api/v1/orders/**").authenticated()
+                        .requestMatchers("/api/v1/checkouts/**").authenticated()
                         .requestMatchers("/h2-console/**").permitAll()
                         .anyRequest().authenticated())
 

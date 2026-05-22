@@ -2,46 +2,23 @@ package com.nexoracommerce.product.mapper;
 
 import com.nexoracommerce.product.entity.Product;
 import com.nexoracommerce.product.dto.response.ProductResponse;
-import org.springframework.stereotype.Component;
+import com.nexoracommerce.product.dto.request.ProductRequest;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.ReportingPolicy;
 
-@Component
-public class ProductMapper {
+import java.util.List;
+import java.util.Set;
 
-  
-    public ProductResponse toProductResponse(Product product) {
-        if (product == null) {
-            return null;
-        }
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
+public interface ProductMapper {
 
-        return ProductResponse.builder()
-                .id(product.getId())
-                .name(product.getName())
-                .description(product.getDescription())
-                .price(product.getPrice())
-                .status(product.getStatus() != null ? product.getStatus().toString() : null)
-                .imageUrl(product.getImageUrl())
-                .imagePublicId(product.getImagePublicId())
-                .build();
-    }
+    ProductResponse toProductResponse(Product product);
 
-   
-    public Product toEntity(Product product) {
-        return product;
-    }
+    @Mapping(target = "status", expression = "java(request.status() != null ? com.nexoracommerce.common.enums.ProductStatus.valueOf(request.status()) : null)")
+    Product toEntity(ProductRequest request);
 
-    public Product toEntity(com.nexoracommerce.product.dto.request.ProductRequest request) {
-        if (request == null) {
-            return null;
-        }
+    List<ProductResponse> toResponseList(List<Product> products);
 
-        Product product = Product.builder()
-                .id(request.getId())
-                .name(request.getName())
-                .description(request.getDescription())
-                .status(request.getStatus() != null ? com.nexoracommerce.common.enums.ProductStatus.valueOf(request.getStatus()) : null)
-                .build();
-        product.setPrice(request.getPrice());
-        product.setImageUrl(request.getImageUrl());
-        return product;
-    }
+    Set<ProductResponse> toResponseSet(Set<Product> products);
 }

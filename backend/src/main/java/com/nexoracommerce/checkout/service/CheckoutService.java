@@ -1,6 +1,9 @@
 package com.nexoracommerce.checkout.service;
 
 import com.nexoracommerce.common.enums.OrderStatus;
+import com.nexoracommerce.common.exception.BusinessLogicException;
+import com.nexoracommerce.common.exception.ResourceNotFoundException;
+import com.nexoracommerce.checkout.dto.PaymentResponse;
 import com.nexoracommerce.order.dto.request.OrderRequest;
 import com.nexoracommerce.order.dto.response.OrderResponse;
 import com.nexoracommerce.order.entity.Order;
@@ -27,7 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class CheckoutService {
+public class CheckoutService implements ICheckoutService {
 
     private final IOrderService orderService;
     private final RedisStockService redisStockService;
@@ -43,9 +46,10 @@ public class CheckoutService {
      * 4. Returns order ready for payment
      */
     @Transactional
+    @Override
     public OrderResponse checkoutWithRedisProtection(OrderRequest request, String userId) {
         log.info("Starting checkout with Redis protection: userId={}, itemsCount={}", 
-                userId, request.getOrderItems().size());
+                userId, request.orderItems().size());
         
         try {
             // 1. Check Redis stock for all items before anything else
@@ -54,16 +58,16 @@ public class CheckoutService {
             
             // 2. Atomically decrement Redis stock for all items
             // If any item fails, exception is thrown and nothing is decremented
-            for (var item : request.getOrderItems()) {
+            for (var item : request.orderItems()) {
                 boolean decremented = redisStockService.decrementIfAvailable(
-                        item.getProductId(), 
-                        item.getQuantity()
+                        item.productId(), 
+                        item.quantity()
                 );
                 
                 if (!decremented) {
                     log.warn("Redis stock insufficient after previous check: productId={}, quantity={}", 
-                            item.getProductId(), item.getQuantity());
-                    throw new RuntimeException("Stock insufficient for product: " + item.getProductId());
+                            item.productId(), item.quantity());
+                    throw new RuntimeException("Stock insufficient for product: " + item.productId());
                 }
             }
             log.debug("Redis stock decremented successfully: userId={}", userId);
@@ -71,7 +75,7 @@ public class CheckoutService {
             // 3. Create order (which reserves stock in DB)
             OrderResponse orderResponse = orderService.createOrder(request, userId);
             log.info("Order created successfully: orderId={}, userId={}", 
-                    orderResponse.getId(), userId);
+                    orderResponse.id(), userId);
             
             return orderResponse;
             
@@ -80,12 +84,12 @@ public class CheckoutService {
             log.error("Checkout failed, rolling back Redis stock: userId={}, error={}", 
                     userId, e.getMessage());
             
-            for (var item : request.getOrderItems()) {
+            for (var item : request.orderItems()) {
                 try {
-                    redisStockService.incrementStock(item.getProductId(), item.getQuantity());
+                    redisStockService.incrementStock(item.productId(), item.quantity());
                 } catch (Exception ex) {
                     log.error("Failed to rollback Redis stock: productId={}, error={}", 
-                            item.getProductId(), ex.getMessage());
+                            item.productId(), ex.getMessage());
                 }
             }
             
@@ -99,15 +103,16 @@ public class CheckoutService {
      * On payment failure: stock is rolled back from both Redis and DB
      */
     @Transactional
-    public void processPayment(String orderId, boolean paymentSuccessful) throws Exception {
+    @Override
+    public PaymentResponse processPayment(String orderId, boolean paymentSuccessful) {
         log.info("Processing payment for order: orderId={}, success={}", 
                 orderId, paymentSuccessful);
         
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("Order not found: " + orderId));
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found: " + orderId));
         
         if (order.getStatus() != OrderStatus.PENDING) {
-            throw new IllegalStateException("Order is not in PENDING status: " + orderId);
+            throw new BusinessLogicException("Order is not in PENDING status: " + orderId);
         }
         
         if (paymentSuccessful) {
@@ -115,6 +120,11 @@ public class CheckoutService {
             order.setStatus(OrderStatus.CONFIRMED);
             orderRepository.save(order);
             log.info("Payment confirmed for order: orderId={}", orderId);
+            return new PaymentResponse(
+                    orderId,
+                    OrderStatus.CONFIRMED.name(),
+                    "Payment processed successfully. Order confirmed."
+            );
         } else {
             // Payment failed - rollback stock
             log.warn("Payment failed for order: orderId={}, rolling back stock", orderId);
@@ -124,6 +134,11 @@ public class CheckoutService {
             order.setStatus(OrderStatus.CANCELLED);
             orderRepository.save(order);
             log.info("Order cancelled due to payment failure: orderId={}", orderId);
+            return new PaymentResponse(
+                    orderId,
+                    OrderStatus.CANCELLED.name(),
+                    "Payment failed. Order cancelled and stock restored."
+            );
         }
     }
     
@@ -132,15 +147,15 @@ public class CheckoutService {
      * Throws exception if any item is out of stock
      */
     private void checkRedisStockAvailable(OrderRequest request) {
-        for (var item : request.getOrderItems()) {
-            long availableStock = redisStockService.getStock(item.getProductId());
+        for (var item : request.orderItems()) {
+            long availableStock = redisStockService.getStock(item.productId());
             
-            if (availableStock < item.getQuantity()) {
+            if (availableStock < item.quantity()) {
                 log.warn("Insufficient Redis stock: productId={}, required={}, available={}", 
-                        item.getProductId(), item.getQuantity(), availableStock);
+                        item.productId(), item.quantity(), availableStock);
                 throw new RuntimeException(
-                        "Insufficient stock for product: " + item.getProductId() + 
-                        ". Available: " + availableStock + ", Required: " + item.getQuantity()
+                        "Insufficient stock for product: " + item.productId() + 
+                        ". Available: " + availableStock + ", Required: " + item.quantity()
                 );
             }
         }

@@ -18,7 +18,7 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class StockSyncService {
+public class StockSyncService implements IStockSyncService {
 
     private final RedisStockService redisStockService;
     private final ProductVariantRepository productVariantRepository;

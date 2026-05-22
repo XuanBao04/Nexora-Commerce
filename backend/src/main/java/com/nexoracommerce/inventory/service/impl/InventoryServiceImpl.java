@@ -2,6 +2,7 @@ package com.nexoracommerce.inventory.service.impl;
 
 import com.nexoracommerce.constant.MessageConstant;
 import com.nexoracommerce.inventory.dto.response.InventoryResponse;
+import com.nexoracommerce.inventory.mapper.InventoryMapper;
 import com.nexoracommerce.common.exception.ResourceNotFoundException;
 import com.nexoracommerce.common.exception.BusinessLogicException;
 import com.nexoracommerce.product.entity.ProductVariant;
@@ -18,16 +19,14 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class InventoryServiceImpl implements IInventoryService {
 
     private final ProductVariantRepository productVariantRepository;
+    private final InventoryMapper inventoryMapper;
 
     private int getSafeReservedQuantity(ProductVariant variant) {
         return variant.getReservedQuantity() == null ? 0 : variant.getReservedQuantity();
-    }
-
-    private int getSafeSoldQuantity(ProductVariant variant) {
-        return variant.getSoldQuantity() == null ? 0 : variant.getSoldQuantity();
     }
 
     // ======================== Inventory Retrieval ========================
@@ -36,14 +35,7 @@ public class InventoryServiceImpl implements IInventoryService {
     public InventoryResponse getInventoryDetails(String productId) {
         validateProductId(productId);
         ProductVariant variant = findVariantOrThrow(productId);
-        
-        return InventoryResponse.builder()
-                .productId(variant.getSku())
-                .quantity(variant.getQuantity())
-                .reservedQuantity(getSafeReservedQuantity(variant))
-                .soldQuantity(getSafeSoldQuantity(variant))
-                .availableQuantity(calculateAvailableStock(variant))
-                .build();
+        return inventoryMapper.toResponse(variant);
     }
 
     @Override
@@ -127,7 +119,7 @@ public class InventoryServiceImpl implements IInventoryService {
         
         variant.setReservedQuantity(newReserved);
         variant.setQuantity(variant.getQuantity() - quantity);
-        variant.setSoldQuantity(getSafeSoldQuantity(variant) + quantity);
+        variant.setSoldQuantity((variant.getSoldQuantity() == null ? 0 : variant.getSoldQuantity()) + quantity);
         
         productVariantRepository.save(variant);
     }

@@ -16,6 +16,7 @@ import java.time.LocalDateTime;
 @Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ApiResponse<T> {
+    private Boolean success;
     private LocalDateTime timestamp;
     private Integer status;
     private String message;
@@ -24,6 +25,7 @@ public class ApiResponse<T> {
 
     public static <T> ApiResponse<T> success(T data, String message, Integer status) {
         return ApiResponse.<T>builder()
+                .success(status != null && status >= 200 && status < 300)
                 .timestamp(LocalDateTime.now())
                 .status(status)
                 .message(message)
@@ -41,6 +43,19 @@ public class ApiResponse<T> {
 
     public static <T> ApiResponse<T> ok(T data) {
         return success(data, "Success", 200);
+    }
+
+    public static <T> ApiResponse<T> ok(T data, String message) {
+        return success(data, message, 200);
+    }
+
+    public static <T> ApiResponse<T> failure(String message, Integer status) {
+        return ApiResponse.<T>builder()
+                .success(false)
+                .timestamp(LocalDateTime.now())
+                .status(status)
+                .message(message)
+                .build();
     }
 
     public static <T> ApiResponse<T> okWithPagination(T data, PaginationInfo pagination) {

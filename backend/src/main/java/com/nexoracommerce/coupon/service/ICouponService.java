@@ -1,64 +1,28 @@
 package com.nexoracommerce.coupon.service;
 
+import com.nexoracommerce.coupon.dto.request.CreateCouponRequest;
+import com.nexoracommerce.coupon.dto.request.UpdateCouponRequest;
+import com.nexoracommerce.coupon.dto.response.CouponResponse;
 import com.nexoracommerce.coupon.entity.Coupon;
 import java.util.List;
 
 public interface ICouponService {
-    /**
-     * Validate coupon code and check if applicable for order amount
-     * @param couponCode coupon code to validate
-     * @param orderAmount subtotal amount (before discount)
-     * @return Coupon entity if valid and applicable
-     * @throws BusinessLogicException if coupon is invalid or not applicable
-     */
+    
     Coupon validateAndGetCoupon(String couponCode, Long orderAmount);
 
-    /**
-     * Calculate discount amount
-     * @param couponCode coupon code
-     * @param orderAmount subtotal amount
-     * @return discount amount in VND
-     */
     Long calculateDiscount(String couponCode, Long orderAmount);
 
-    /**
-     * Get coupon by code
-     * @param couponCode coupon code
-     * @return Coupon entity
-     */
+    CouponResponse getCouponResponseByCode(String couponCode);
+
     Coupon getCouponByCode(String couponCode);
 
-    /**
-     * Create new coupon
-     * @param coupon coupon entity
-     * @return saved coupon
-     */
-    Coupon createCoupon(Coupon coupon);
+    CouponResponse createCoupon(CreateCouponRequest request);
 
-    /**
-     * Check if coupon is valid and active
-     * @param couponCode coupon code
-     * @return true if valid
-     */
     boolean isCouponValid(String couponCode);
 
-    /**
-     * Get all coupons
-     * @return List of all coupons
-     */
-    List<Coupon> getAllCoupons();
+    List<CouponResponse> getAllCoupons();
 
-    /**
-     * Update existing coupon
-     * @param code coupon code
-     * @param coupon updated coupon entity
-     * @return updated coupon
-     */
-    Coupon updateCoupon(String code, Coupon coupon);
+    CouponResponse updateCoupon(String code, UpdateCouponRequest request);
 
-    /**
-     * Delete coupon by code
-     * @param code coupon code
-     */
     void deleteCoupon(String code);
 }
