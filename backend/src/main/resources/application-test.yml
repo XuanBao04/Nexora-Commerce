@@ -1,0 +1,19 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://db:5432/shopcart?currentSchema=test,public
+    username: admin
+    password: admin123
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: test
+  flyway:
+    enabled: true
+    schemas: test
+
+logging:
+  level:
+    root: WARN

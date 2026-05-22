@@ -1,0 +1,51 @@
+# Environment variables (local only)
+.env
+.env.*
+!.env.example
+
+# IDE/editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Build outputs
+backend/target/
+frontend/dist/
+frontend/build/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Java
+*.class
+*.jar
+*.war
+*.ear
+
+# Maven
+.m2/
+
+# Testing/coverage
+coverage/
+.nyc_output/
+frontend/coverage/
+frontend/playwright-report/
+frontend/test-results/
+
+# Planning & notes (local only)
+nexora_roadmap.md
+task.md

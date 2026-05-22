@@ -1,0 +1,187 @@
+name: ShopCart Test Pipeline
+
+on:
+  push:
+    branches: [ "main","bao/backend","thanh/frontend", "wolf"]
+  pull_request:
+    branches: [ "main", "bao/backend", "thanh/frontend", "wolf"]
+  workflow_dispatch:
+
+jobs:
+  backend-tests:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Run backend tests
+        working-directory: backend
+        run: mvn --batch-mode clean test
+
+      - name: Collect backend test reports
+        if: always()
+        run: |
+          mkdir -p test-artifacts/backend
+          echo "Backend test reports" > test-artifacts/backend/README.txt
+          if [ -d backend/target/surefire-reports ]; then
+            cp -R backend/target/surefire-reports test-artifacts/backend/
+          fi
+          if [ -d backend/target/site/jacoco ]; then
+            cp -R backend/target/site/jacoco test-artifacts/backend/
+          fi
+
+      - name: Upload backend test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-reports
+          path: test-artifacts/backend/
+          if-no-files-found: error
+          retention-days: 14
+
+  frontend-tests:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Run frontend tests with coverage
+        working-directory: frontend
+        run: pnpm test:coverage --run
+
+      - name: Build frontend
+        working-directory: frontend
+        run: pnpm build
+
+      - name: Collect frontend test reports
+        if: always()
+        run: |
+          mkdir -p test-artifacts/frontend
+          echo "Frontend test reports" > test-artifacts/frontend/README.txt
+          if [ -d frontend/coverage ]; then
+            cp -R frontend/coverage test-artifacts/frontend/
+          fi
+
+      - name: Upload frontend test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-test-reports
+          path: test-artifacts/frontend/
+          if-no-files-found: error
+          retention-days: 14
+
+  playwright-tests:
+    name: Playwright Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        # setup backend
+      - name: Setup environment variables
+        run: cp .env
+
+      - name: Start Database and Backend via Docker
+        run: docker compose up -d db backend
+      - name: Wait for Backend to be ready
+        run: |
+          echo "Waiting for backend..."
+          timeout 90s bash -c '
+          until curl -s http://localhost:8080/actuator/health | grep "UP"; do
+            sleep 5
+          done'
+
+        # setup frontend
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        working-directory: frontend
+        run: pnpm exec playwright install --with-deps
+
+      # run test playwright
+      - name: Run Playwright tests
+        working-directory: frontend
+        run: |
+          if [ -d src/tests/e2e ] && find src/tests/e2e -type f \( -name "*.spec.ts" -o -name "*.test.ts" \) | grep -q .; then
+            pnpm e2e
+          else
+            echo "Không tìm thấy Playwright tests trong thư mục frontend/src/tests/e2e, bỏ qua."
+          fi
+
+        # save report
+      - name: Collect Playwright test reports
+        if: always()
+        run: |
+          mkdir -p test-artifacts/playwright
+          echo "Playwright test reports" > test-artifacts/playwright/README.txt
+          if [ -d frontend/playwright-report ]; then
+            cp -R frontend/playwright-report test-artifacts/playwright/
+          fi
+          if [ -d frontend/test-results ]; then
+            cp -R frontend/test-results test-artifacts/playwright/
+          fi
+
+      - name: Upload Playwright test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-test-reports
+          path: test-artifacts/playwright/
+          if-no-files-found: error
+          retention-days: 14
+
+  # docker-build:
+  #   name: Docker Build
+  #   runs-on: ubuntu-latest
+  #   needs:
+  #     - backend-tests
+  #     - frontend-tests
+  #     - playwright-tests
+  #   steps:
+  #     - name: Checkout source
+  #       uses: actions/checkout@v4
+
+  #     - name: Build backend Docker image
+  #       run: docker build -f backend/Dockerfile -t shopcart-backend:test backend
+
+  #     - name: Build frontend Docker image
+  #       run: docker build -f frontend/Dockerfile -t shopcart-frontend:test frontend
