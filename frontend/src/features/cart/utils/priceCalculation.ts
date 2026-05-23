@@ -1,0 +1,123 @@
+import type { CartItemRequest } from '../types/cart';
+import type { InventoryItem } from '@/features/inventory/types/inventory';
+
+export interface PricedLineItem {
+  price: number;
+  quantity: number;
+}
+
+export interface AppliedCoupon {
+  type: 'percent' | 'fixed';
+  value: number;
+}
+
+export interface OrderPriceResult {
+  subtotal: number;
+  discount: number;
+  shipping: number;
+  total: number;
+}
+
+export interface InventoryAvailabilityResult {
+  available: boolean;
+  unavailableItems: string[];
+}
+
+export function calculateOrderPrice(
+  items: PricedLineItem[],
+  coupon: AppliedCoupon | null,
+  shippingFee: number = 0
+): OrderPriceResult {
+  const subtotal = items.reduce(
+    (total, item) => total + item.price * item.quantity,
+    0
+  );
+
+  const validShipping = Number.isFinite(shippingFee) ? Math.max(0, shippingFee) : 0;
+
+  let discount = 0;
+  if (coupon && Number.isFinite(coupon.value)) {
+    if (coupon.type === 'percent') {
+      const clampedPercent = Math.max(0, Math.min(100, coupon.value));
+      discount = Math.min(Math.round((subtotal * clampedPercent) / 100), subtotal);
+    } else if (coupon.type === 'fixed') {
+      const clampedFixed = Math.max(0, coupon.value);
+      discount = Math.min(clampedFixed, subtotal);
+    }
+  }
+
+  return {
+    subtotal,
+    discount,
+    shipping: validShipping,
+    total: subtotal + validShipping - discount,
+  };
+}
+
+export function checkInventoryAvailability(
+  cartItems: CartItemRequest[],
+  inventory: Pick<InventoryItem, 'productId' | 'quantity'>[]
+): InventoryAvailabilityResult {
+  const stockMap = new Map(inventory.map((item) => [item.productId, item.quantity]));
+
+  const requestedMap = new Map<string, number>();
+  for (const cartItem of cartItems) {
+    requestedMap.set(cartItem.productId, (requestedMap.get(cartItem.productId) ?? 0) + cartItem.quantity);
+  }
+
+  const unavailableItems = Array.from(requestedMap.entries())
+    .filter(([productId, totalQty]) => totalQty > (stockMap.get(productId) ?? 0))
+    .map(([productId]) => productId);
+
+  return { available: unavailableItems.length === 0, unavailableItems };
+}
+
+/**
+ * Calculate subtotal (price * quantity)
+ */
+export function calculateSubtotal(price: number, quantity: number): number {
+  return price * quantity;
+}
+
+/**
+ * Calculate tax (subtotal * taxRate)
+ */
+export function calculateTax(subtotal: number, taxRate: number = 0.1): number {
+  return Math.round(subtotal * taxRate);
+}
+
+/**
+ * Calculate discount from coupon
+ */
+export function calculateDiscount(subtotal: number, discountPercent: number): number {
+  return Math.round((subtotal * discountPercent) / 100);
+}
+
+/**
+ * Calculate final total
+ */
+export function calculateTotal(
+  subtotal: number,
+  tax: number = 0,
+  shippingFee: number = 0,
+  discount: number = 0
+): number {
+  return subtotal + tax + shippingFee - discount;
+}
+
+/**
+ * Format price to VND currency
+ */
+export function formatPrice(price: number): string {
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+  }).format(price);
+}
+
+/**
+ * Parse price string to number
+ */
+export function parsePrice(priceString: string): number {
+  return parseInt(priceString.replace(/\D/g, ''), 10) || 0;
+}

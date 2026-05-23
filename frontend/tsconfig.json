@@ -6,7 +6,7 @@
     "jsx": "react-jsx",
     "module": "ESNext",
     "skipLibCheck": true,
-    "ignoreDeprecations": "6.0",
+    "ignoreDeprecations": "5.0",
 
     /* Bundler mode */
     "moduleResolution": "bundler",
@@ -26,12 +26,13 @@
 
     /* Path mapping */
     "baseUrl": ".",
-   "paths": {
+    "paths": {
       "@/*": ["src/*"],
       "@components/*": ["src/components/*"],
       "@services/*": ["src/services/*"],
       "@utils/*": ["src/utils/*"],
-      "@hooks/*": ["src/hooks/*"]
+      "@hooks/*": ["src/hooks/*"],
+      "@features/*": ["src/features/*"]
     }
   },
   "include": ["src", "src/vite-env.d.ts"],

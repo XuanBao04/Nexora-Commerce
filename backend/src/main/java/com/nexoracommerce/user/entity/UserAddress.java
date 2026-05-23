@@ -25,8 +25,7 @@ import lombok.ToString;
 })
 public class UserAddress {
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "user_addresses_id_seq")
-    @SequenceGenerator(name = "user_addresses_id_seq", sequenceName = "user_addresses_id_seq", allocationSize = 1)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @NotNull(message = "User is required")

@@ -6,18 +6,31 @@ import {
   Navigate,
   useNavigate,
 } from "react-router-dom";
-import HeaderLayout from "./components/HeaderLayout/HeaderLayout";
-import ProductList from "./components/ProductList/ProductList";
-import { CartProvider } from "./context/CartContext";
+import HeaderLayout from "@components/HeaderLayout";
+import { CartProvider } from "@features/cart/context/CartContext";
 import { ToastContainer, Slide } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 // Lazy-loaded components for optimal initial paint & route splitting
-const Cart = lazy(() => import("./components/Cart/Cart"));
-const LoginPage = lazy(() => import("./pages/login/LoginPage"));
-const RegisterPage = lazy(() => import("./pages/register/RegisterPage"));
-const Order = lazy(() => import("./components/Order/Order"));
-const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const ProductList = lazy(() =>
+  import("@features/products").then((m) => ({ default: m.ProductList }))
+);
+const Cart = lazy(() =>
+  import("@features/cart").then((m) => ({ default: m.Cart }))
+);
+const LoginPage = lazy(() =>
+  import("@features/auth").then((m) => ({ default: m.LoginPage }))
+);
+const RegisterPage = lazy(() =>
+  import("@features/auth").then((m) => ({ default: m.RegisterPage }))
+);
+const Order = lazy(() =>
+  import("@features/orders").then((m) => ({ default: m.Order }))
+);
+const AdminDashboard = lazy(() =>
+  import("@features/admin").then((m) => ({ default: m.AdminDashboard }))
+);
+
 
 // Premium full-screen loading fallback with glassmorphic blur-spinner
 function PageLoadingFallback() {

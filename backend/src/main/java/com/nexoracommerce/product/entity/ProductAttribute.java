@@ -20,8 +20,7 @@ import lombok.Setter;
 @Table(name = "product_attributes")
 public class ProductAttribute {
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "product_attributes_id_seq")
-    @SequenceGenerator(name = "product_attributes_id_seq", sequenceName = "product_attributes_id_seq", allocationSize = 1)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @NotBlank(message = "Attribute name is required")

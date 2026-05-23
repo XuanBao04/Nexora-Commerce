@@ -27,7 +27,7 @@ Activate when:
 - **Clear SecurityContext on Logout**: Manually clear context to prevent token reuse.
 - **Log Authentication Events**: Entry/exit of login, logout, token refresh; failed authentication attempts.
 - **Use @JsonIgnore for Sensitive Fields**: Never expose passwords or sensitive data in JSON responses.
-
+- **Delegate Filter Exceptions to Handler**: Use Spring's HandlerExceptionResolver inside filters to forward authentication errors (like expired or malformed tokens) directly to the @RestControllerAdvice instead of writing raw JSON strings manually via HttpServletResponse.
 ### DO NOT
 - Store passwords in plaintext or with weak encoding (MD5, SHA1 without salt).
 - Use Spring's default in-memory session management. Always use stateless JWT.
@@ -78,6 +78,11 @@ public class JwtTokenProvider {
         );
     }
     
+    private SecretKey getSigningKey() {
+        byte[] keyBytes = io.jsonwebtoken.io.Decoders.BASE64.decode(jwtSecret);
+        return io.jsonwebtoken.security.Keys.hmacShaKeyFor(keyBytes);
+    }
+
     private String createToken(String userId, String email, List<String> roles, 
                                long expiryInSeconds, String type) {
         Map<String, Object> claims = new HashMap<>();
@@ -87,20 +92,21 @@ public class JwtTokenProvider {
         claims.put("type", type);
         
         return Jwts.builder()
-            .setClaims(claims)
-            .setSubject(userId)
-            .setIssuedAt(new Date())
-            .setExpiration(new Date(System.currentTimeMillis() + expiryInSeconds * 1000))
-            .signWith(SignatureAlgorithm.HS256, jwtSecret)
+            .claims(claims)
+            .subject(userId)
+            .issuedAt(new Date())
+            .expiration(new Date(System.currentTimeMillis() + expiryInSeconds * 1000))
+            .signWith(getSigningKey())
             .compact();
     }
     
     public Claims extractClaims(String token) {
         try {
             return Jwts.parser()
-                .setSigningKey(jwtSecret)
-                .parseClaimsJws(token)
-                .getBody();
+                .verifyWith(getSigningKey())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
         } catch (JwtException | IllegalArgumentException e) {
             log.warn("Invalid JWT token", e);
             throw new JwtAuthenticationException("Invalid or expired JWT token");
@@ -123,8 +129,9 @@ public class JwtTokenProvider {
     public boolean isTokenValid(String token) {
         try {
             Jwts.parser()
-                .setSigningKey(jwtSecret)
-                .parseClaimsJws(token);
+                .verifyWith(getSigningKey())
+                .build()
+                .parseSignedClaims(token);
             return true;
         } catch (ExpiredJwtException e) {
             log.info("JWT token expired");
@@ -227,22 +234,20 @@ public class SecurityConfig {
     
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-            .csrf().disable()
-            .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            .and()
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**", "/api/health", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                .requestMatchers("/api/orders/**", "/api/cart/**").hasRole("USER")
-                .anyRequest().authenticated()
-            )
-            .cors().configurationSource(corsConfigurationSource())
-            .and()
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-            .exceptionHandling()
+   @Bean
+public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    http
+        .csrf(csrf -> csrf.disable()) // Cú pháp mới của Spring Security 6
+        .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+        .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        .authorizeHttpRequests(auth -> auth
+            .requestMatchers("/api/auth/**", "/api/health", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+            .requestMatchers("/api/admin/**").hasRole("ADMIN")
+            .requestMatchers("/api/orders/**", "/api/cart/**").hasRole("USER")
+            .anyRequest().authenticated()
+        )
+        .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+        .exceptionHandling(exception -> exception
             .authenticationEntryPoint((request, response, authException) -> {
                 response.setStatus(HttpStatus.UNAUTHORIZED.value());
                 response.setContentType("application/json");
@@ -253,10 +258,11 @@ public class SecurityConfig {
                 response.setStatus(HttpStatus.FORBIDDEN.value());
                 response.setContentType("application/json");
                 response.getWriter().write("{\"error\":\"FORBIDDEN\",\"message\":\"Access denied\"}");
-            });
-        
-        return http.build();
-    }
+            })
+        );
+    
+    return http.build();
+}
     
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -463,7 +469,7 @@ jwt:
 // ❌ WRONG
 public boolean isTokenValid(String token) {
     try {
-        Jwts.parser().setSigningKey(secret).parseClaimsJws(token);
+        Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token);
         return true;
     } catch (Exception e) {
         return false;
@@ -476,9 +482,10 @@ public boolean isTokenValid(String token) {
 public boolean isTokenValid(String token) {
     try {
         Claims claims = Jwts.parser()
-            .setSigningKey(jwtSecret)
-            .parseClaimsJws(token)
-            .getBody();
+            .verifyWith(getSigningKey())
+            .build()
+            .parseSignedClaims(token)
+            .getPayload();
         return !isTokenExpired(claims);
     } catch (ExpiredJwtException | JwtException e) {
         return false;

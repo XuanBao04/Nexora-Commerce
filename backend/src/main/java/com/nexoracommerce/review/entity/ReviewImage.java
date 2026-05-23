@@ -25,8 +25,7 @@ import lombok.ToString;
 })
 public class ReviewImage {
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "review_images_id_seq")
-    @SequenceGenerator(name = "review_images_id_seq", sequenceName = "review_images_id_seq", allocationSize = 1)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @NotNull(message = "Review is required")

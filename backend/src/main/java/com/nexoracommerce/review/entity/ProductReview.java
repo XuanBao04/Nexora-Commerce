@@ -36,8 +36,7 @@ import java.util.List;
 })
 public class ProductReview {
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "product_reviews_id_seq")
-    @SequenceGenerator(name = "product_reviews_id_seq", sequenceName = "product_reviews_id_seq", allocationSize = 1)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @NotNull(message = "User is required")

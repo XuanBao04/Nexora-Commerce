@@ -26,8 +26,7 @@ import lombok.ToString;
 })
 public class OrderItem {
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "order_items_id_seq")
-    @SequenceGenerator(name = "order_items_id_seq", sequenceName = "order_items_id_seq", allocationSize = 1)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @NotNull(message = "Order is required")

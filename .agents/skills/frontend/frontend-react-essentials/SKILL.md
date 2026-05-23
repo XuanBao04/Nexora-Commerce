@@ -48,9 +48,14 @@ VITE_APP_NAME=Nexora Commerce
 ```typescript
 // types/api.ts
 export interface ApiResponse<T> {
-  data: T;
+  success: boolean;
   message?: string;
-  status: number;
+  data: T;
+  pagination?: {
+    currentPage: number;
+    totalPages: number;
+    totalElements: number;
+  };
 }
 
 export interface Product {
@@ -118,15 +123,19 @@ const createApiClient = (): AxiosInstance => {
     return config;
   });
 
-  // Response interceptor: handle 401 (token expiry)
+  // Response interceptor: handle 401 (token expiry) and clean response data unwrap
   client.interceptors.response.use(
-    (response) => response,
+    (response) => response.data as any, // Returns direct ApiResponse instead of full AxiosResponse
     (error: AxiosError) => {
       if (error.response?.status === 401) {
         localStorage.removeItem('access_token');
         window.location.href = '/login';
       }
-      return Promise.reject(error);
+      
+      // Extract detailed error information from backend payload
+      const errorData = error.response?.data as any;
+      const errorMessage = errorData?.message || error.message || 'An unknown error occurred';
+      return Promise.reject(new Error(errorMessage));
     }
   );
 
@@ -136,79 +145,76 @@ const createApiClient = (): AxiosInstance => {
 export const apiClient = createApiClient();
 
 // services/api/productApi.ts
+import { ApiResponse, Product } from '../../types/api';
+
 export const productApi = {
-  getProducts: async (page = 0, limit = 20) => {
-    const { data } = await apiClient.get('/products', {
+  getProducts: async (page = 0, limit = 20): Promise<ApiResponse<Product[]>> => {
+    return apiClient.get('/products', {
       params: { page, limit },
-    });
-    return data;
+    }) as unknown as Promise<ApiResponse<Product[]>>;
   },
 
-  getProductById: async (id: string) => {
-    const { data } = await apiClient.get(`/products/${id}`);
-    return data;
+  getProductById: async (id: string): Promise<ApiResponse<Product>> => {
+    return apiClient.get(`/products/${id}`) as unknown as Promise<ApiResponse<Product>>;
   },
 
-  search: async (query: string) => {
-    const { data } = await apiClient.get('/ai/search', {
+  search: async (query: string): Promise<ApiResponse<Product[]>> => {
+    return apiClient.get('/ai/search', {
       params: { q: query },
-    });
-    return data;
+    }) as unknown as Promise<ApiResponse<Product[]>>;
   },
 };
 
 // services/api/cartApi.ts
+import { ApiResponse, CartItem } from '../../types/api';
+
 export const cartApi = {
-  getCart: async () => {
-    const { data } = await apiClient.get('/cart');
-    return data;
+  getCart: async (): Promise<ApiResponse<CartItem[]>> => {
+    return apiClient.get('/cart') as unknown as Promise<ApiResponse<CartItem[]>>;
   },
 
-  addItem: async (variantId: string, quantity: number) => {
-    const { data } = await apiClient.post('/cart/items', {
+  addItem: async (variantId: string, quantity: number): Promise<ApiResponse<CartItem[]>> => {
+    return apiClient.post('/cart/items', {
       variantId,
       quantity,
-    });
-    return data;
+    }) as unknown as Promise<ApiResponse<CartItem[]>>;
   },
 
-  removeItem: async (itemId: string) => {
-    const { data } = await apiClient.delete(`/cart/items/${itemId}`);
-    return data;
+  removeItem: async (itemId: string): Promise<ApiResponse<CartItem[]>> => {
+    return apiClient.delete(`/cart/items/${itemId}`) as unknown as Promise<ApiResponse<CartItem[]>>;
   },
 
-  checkout: async (paymentMethod: string) => {
-    const { data } = await apiClient.post('/checkout', { paymentMethod });
-    return data;
+  checkout: async (paymentMethod: string): Promise<ApiResponse<{ orderId: string; paymentUrl?: string }>> => {
+    return apiClient.post('/checkout', { paymentMethod }) as unknown as Promise<ApiResponse<{ orderId: string; paymentUrl?: string }>>;
   },
 };
 
 // services/api/orderApi.ts
+import { ApiResponse, Order } from '../../types/api';
+
 export const orderApi = {
-  getOrders: async (page = 0) => {
-    const { data } = await apiClient.get('/orders', { params: { page } });
-    return data;
+  getOrders: async (page = 0): Promise<ApiResponse<Order[]>> => {
+    return apiClient.get('/orders', { params: { page } }) as unknown as Promise<ApiResponse<Order[]>>;
   },
 
-  getOrderById: async (id: string) => {
-    const { data } = await apiClient.get(`/orders/${id}`);
-    return data;
+  getOrderById: async (id: string): Promise<ApiResponse<Order>> => {
+    return apiClient.get(`/orders/${id}`) as unknown as Promise<ApiResponse<Order>>;
   },
 
-  cancelOrder: async (id: string) => {
-    const { data } = await apiClient.put(`/orders/${id}/cancel`);
-    return data;
+  cancelOrder: async (id: string): Promise<ApiResponse<Order>> => {
+    return apiClient.put(`/orders/${id}/cancel`) as unknown as Promise<ApiResponse<Order>>;
   },
 };
 
 // services/api/aiApi.ts
+import { ApiResponse, Product } from '../../types/api';
+
 export const aiApi = {
-  chat: async (message: string, sessionId: string) => {
-    const { data } = await apiClient.post('/ai/chat', {
+  chat: async (message: string, sessionId: string): Promise<ApiResponse<{ response: string }>> => {
+    return apiClient.post('/ai/chat', {
       message,
       sessionId,
-    });
-    return data;
+    }) as unknown as Promise<ApiResponse<{ response: string }>>;
   },
 };
 ```
@@ -217,6 +223,8 @@ export const aiApi = {
 
 ```typescript
 // hooks/useAsync.ts
+import { useState, useCallback } from 'react';
+
 export const useAsync = <T,>() => {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(false);
@@ -242,32 +250,51 @@ export const useAsync = <T,>() => {
 };
 
 // hooks/useCart.ts
+import { useState, useEffect, useCallback } from 'react';
+import { cartApi } from '../services/api/cartApi';
+import { CartItem } from '../types/api';
+import { useAsync } from './useAsync';
+
 export const useCart = () => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const { loading, execute } = useAsync<CartItem[]>();
 
   useEffect(() => {
-    execute(() => cartApi.getCart()).then(setCart).catch(() => setCart([]));
-  }, []);
+    execute(async () => {
+      const res = await cartApi.getCart();
+      return res.data; // Unwrap the data field from ApiResponse
+    })
+      .then(setCart)
+      .catch(() => setCart([]));
+  }, [execute]);
 
   const addItem = useCallback(
     async (variantId: string, quantity: number) => {
-      const updated = await execute(() => cartApi.addItem(variantId, quantity));
-      setCart(updated || []);
+      const updatedList = await execute(async () => {
+        const res = await cartApi.addItem(variantId, quantity);
+        return res.data; // Unwrap the data field from ApiResponse
+      });
+      setCart(updatedList || []);
     },
     [execute]
   );
 
   const removeItem = useCallback(
     async (itemId: string) => {
-      const updated = await execute(() => cartApi.removeItem(itemId));
-      setCart(updated || []);
+      const updatedList = await execute(async () => {
+        const res = await cartApi.removeItem(itemId);
+        return res.data; // Unwrap the data field from ApiResponse
+      });
+      setCart(updatedList || []);
     },
     [execute]
   );
 
   const checkout = useCallback(async (paymentMethod: string) => {
-    const result = await execute(() => cartApi.checkout(paymentMethod));
+    const result = await execute(async () => {
+      const res = await cartApi.checkout(paymentMethod);
+      return res.data as any; // Unwrap the data field from ApiResponse
+    });
     setCart([]);
     return result;
   }, [execute]);
@@ -276,20 +303,30 @@ export const useCart = () => {
 };
 
 // hooks/useProducts.ts
+import { useState, useCallback } from 'react';
+import { productApi } from '../services/api/productApi';
+import { Product } from '../types/api';
+import { useAsync } from './useAsync';
+
 export const useProducts = () => {
   const { data: products, loading, execute } = useAsync<Product[]>();
   const [page, setPage] = useState(0);
 
   const fetchProducts = useCallback(async (pageNum = 0) => {
-    const data = await execute(() => productApi.getProducts(pageNum, 20));
+    const dataList = await execute(async () => {
+      const res = await productApi.getProducts(pageNum, 20);
+      return res.data; // Unwrap the data field from ApiResponse
+    });
     setPage(pageNum);
-    return data;
+    return dataList;
   }, [execute]);
 
   return { products, loading, page, fetchProducts };
 };
 
 // hooks/useDebounce.ts
+import { useState, useEffect } from 'react';
+
 export const useDebounce = <T,>(value: T, delay = 500): T => {
   const [debounced, setDebounced] = useState(value);
 
@@ -339,21 +376,21 @@ interface ProductCardProps {
 
 export const ProductCard: React.FC<ProductCardProps> = React.memo(
   ({ product, onAddToCart }) => (
-    <div className=\"border rounded-lg overflow-hidden hover:shadow-lg transition\">
+    <div className="border rounded-lg overflow-hidden hover:shadow-lg transition">
       <img
         src={product.images[0]}
         alt={product.name}
-        className=\"w-full h-48 object-cover\"
-        loading=\"lazy\"
+        className="w-full h-48 object-cover"
+        loading="lazy"
       />
-      <div className=\"p-4\">
-        <h3 className=\"font-semibold line-clamp-2\">{product.name}</h3>
-        <p className=\"text-lg font-bold text-blue-600 mt-2\">
+      <div className="p-4">
+        <h3 className="font-semibold line-clamp-2">{product.name}</h3>
+        <p className="text-lg font-bold text-blue-600 mt-2">
           ${product.price.toFixed(2)}
         </p>
         <button
           onClick={() => onAddToCart(product.id)}
-          className=\"w-full mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition\"
+          className="w-full mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
         >
           Add to Cart
         </button>
@@ -374,24 +411,26 @@ export const SearchBar: React.FC = () => {
       return;
     }
 
-    aiApi.search(debouncedQuery).then(setResults).catch(() => setResults([]));
+    productApi.search(debouncedQuery)
+      .then((res) => setResults(res.data))
+      .catch(() => setResults([]));
   }, [debouncedQuery]);
 
   return (
-    <div className=\"relative\">
+    <div className="relative">
       <input
-        type=\"text\"
-        placeholder=\"Tìm kiếm sản phẩm...\"
+        type="text"
+        placeholder="Tìm kiếm sản phẩm..."
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        className=\"w-full px-4 py-2 border rounded-lg\"
+        className="w-full px-4 py-2 border rounded-lg"
       />
       {results.length > 0 && (
-        <div className=\"absolute top-full left-0 right-0 bg-white border rounded-lg mt-1 max-h-64 overflow-y-auto\">
+        <div className="absolute top-full left-0 right-0 bg-white border rounded-lg mt-1 max-h-64 overflow-y-auto">
           {results.map((product) => (
             <div
               key={product.id}
-              className=\"px-4 py-2 hover:bg-gray-100 cursor-pointer\"
+              className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
             >
               {product.name}
             </div>
@@ -415,7 +454,7 @@ export const CheckoutPage: React.FC = () => {
       if (paymentMethod === 'VNPAY' && result.paymentUrl) {
         window.location.href = result.paymentUrl;
       } else {
-        navigate(\`/orders/\${result.orderId}\`);
+        navigate(`/orders/${result.orderId}`);
       }
     } catch (error) {
       console.error('Checkout failed:', error);
@@ -423,31 +462,31 @@ export const CheckoutPage: React.FC = () => {
   };
 
   return (
-    <div className=\"max-w-4xl mx-auto p-6\">
-      <h1 className=\"text-3xl font-bold mb-6\">Checkout</h1>
+    <div className="max-w-4xl mx-auto p-6">
+      <h1 className="text-3xl font-bold mb-6">Checkout</h1>
 
-      <div className=\"bg-white rounded-lg shadow-md p-6 mb-6\">
-        <h2 className=\"text-xl font-semibold mb-4\">Order Summary</h2>
-        <div className=\"space-y-2\">
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
+        <div className="space-y-2">
           {cart.map((item) => (
-            <div key={item.variantId} className=\"flex justify-between\">
+            <div key={item.variantId} className="flex justify-between">
               <span>{item.product.name} x {item.quantity}</span>
               <span>${(item.product.price * item.quantity).toFixed(2)}</span>
             </div>
           ))}
         </div>
-        <div className=\"border-t mt-4 pt-4 font-bold\">
+        <div className="border-t mt-4 pt-4 font-bold">
           Total: ${cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0).toFixed(2)}
         </div>
       </div>
 
-      <div className=\"bg-white rounded-lg shadow-md p-6 mb-6\">
-        <h2 className=\"text-xl font-semibold mb-4\">Payment Method</h2>
-        <div className=\"space-y-2\">
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <h2 className="text-xl font-semibold mb-4">Payment Method</h2>
+        <div className="space-y-2">
           <label>
             <input
-              type=\"radio\"
-              value=\"COD\"
+              type="radio"
+              value="COD"
               checked={paymentMethod === 'COD'}
               onChange={(e) => setPaymentMethod(e.target.value)}
             />
@@ -455,8 +494,8 @@ export const CheckoutPage: React.FC = () => {
           </label>
           <label>
             <input
-              type=\"radio\"
-              value=\"VNPAY\"
+              type="radio"
+              value="VNPAY"
               checked={paymentMethod === 'VNPAY'}
               onChange={(e) => setPaymentMethod(e.target.value)}
             />
@@ -468,7 +507,7 @@ export const CheckoutPage: React.FC = () => {
       <button
         onClick={handleCheckout}
         disabled={loading || cart.length === 0}
-        className=\"w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50\"
+        className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
       >
         {loading ? 'Processing...' : 'Complete Order'}
       </button>
@@ -501,9 +540,9 @@ export class ErrorBoundary extends React.Component<
   render() {
     if (this.state.hasError) {
       return (
-        <div className=\"p-4 bg-red-50 border border-red-200 rounded-lg\">
-          <h2 className=\"font-bold text-red-800\">Something went wrong</h2>
-          <p className=\"text-red-700\">{this.state.error?.message}</p>
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+          <h2 className="font-bold text-red-800">Something went wrong</h2>
+          <p className="text-red-700">{this.state.error?.message}</p>
         </div>
       );
     }

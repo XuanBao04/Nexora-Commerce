@@ -20,8 +20,7 @@ import lombok.Setter;
 @Table(name = "brands")
 public class Brand {
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "brands_id_seq")
-    @SequenceGenerator(name = "brands_id_seq", sequenceName = "brands_id_seq", allocationSize = 1)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @NotBlank(message = "Brand name is required")

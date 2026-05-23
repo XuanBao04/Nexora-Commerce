@@ -27,8 +27,7 @@ import lombok.ToString;
 })
 public class ProductAttributeValue {
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "product_attribute_values_id_seq")
-    @SequenceGenerator(name = "product_attribute_values_id_seq", sequenceName = "product_attribute_values_id_seq", allocationSize = 1)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @NotNull(message = "Product attribute is required")

@@ -34,8 +34,7 @@ import java.time.LocalDateTime;
 @EntityListeners(AuditingEntityListener.class)
 public class CartItem {
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "cart_items_id_seq")
-    @SequenceGenerator(name = "cart_items_id_seq", sequenceName = "cart_items_id_seq", allocationSize = 1)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @NotNull(message = "User is required")

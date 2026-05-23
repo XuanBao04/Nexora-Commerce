@@ -30,8 +30,7 @@ import java.time.LocalDateTime;
 })
 public class PaymentTransaction {
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "payment_transactions_id_seq")
-    @SequenceGenerator(name = "payment_transactions_id_seq", sequenceName = "payment_transactions_id_seq", allocationSize = 1)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @NotNull(message = "Order is required")

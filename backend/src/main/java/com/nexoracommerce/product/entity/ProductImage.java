@@ -26,8 +26,7 @@ import lombok.ToString;
 })
 public class ProductImage {
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "product_images_id_seq")
-    @SequenceGenerator(name = "product_images_id_seq", sequenceName = "product_images_id_seq", allocationSize = 1)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @NotNull(message = "Product is required")

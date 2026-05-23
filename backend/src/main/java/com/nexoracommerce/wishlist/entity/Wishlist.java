@@ -31,8 +31,7 @@ import java.time.LocalDateTime;
 })
 public class Wishlist {
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "wishlists_id_seq")
-    @SequenceGenerator(name = "wishlists_id_seq", sequenceName = "wishlists_id_seq", allocationSize = 1)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @NotNull(message = "User is required")

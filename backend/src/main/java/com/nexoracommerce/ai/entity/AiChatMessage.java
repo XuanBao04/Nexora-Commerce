@@ -29,8 +29,7 @@ import java.time.LocalDateTime;
 })
 public class AiChatMessage {
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "ai_chat_messages_id_seq")
-    @SequenceGenerator(name = "ai_chat_messages_id_seq", sequenceName = "ai_chat_messages_id_seq", allocationSize = 1)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
