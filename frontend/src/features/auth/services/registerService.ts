@@ -1,36 +1,23 @@
-import apiClient from "@/services/api/apiClient";
-
-export interface RegisterRequest {
-  username: string;
-  email: string;
-  password?: string;
-  fullName?: string;
-}
-
-export interface RegisterResponse {
-  userId: number;
-  username: string;
-  email: string;
-  role: string;
-  message: string;
-}
+import apiClient, { setAccessToken } from "@/services/api/apiClient";
+import { ApiResponseAuthResponse, AuthResponse, RegisterRequest } from "@/features/auth/types";
 
 export async function registerService(
   request: RegisterRequest,
-): Promise<RegisterResponse> {
+): Promise<AuthResponse> {
   // Use username as fullName if fullName is not provided
   if (!request.fullName) {
     request.fullName = request.username;
   }
 
-  const response = await apiClient.post<RegisterResponse>(
-    "/auth/register",
+  const response = await apiClient.post<ApiResponseAuthResponse>(
+    "/v1/authentications/registrations",
     request
   );
   
-  if (response.status === 201) {
-    return response.data;
+  if ((response.status === 201 || response.status === 200) && response.data.success) {
+    setAccessToken(response.data.data.token);
+    return response.data.data;
   }
   
-  throw new Error("Register failed with status " + response.status);
+  throw new Error(response.data.message || "Registration failed");
 }

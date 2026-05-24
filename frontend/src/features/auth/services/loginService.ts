@@ -1,29 +1,20 @@
 import apiClient, { setAccessToken } from "@/services/api/apiClient";
-
-export interface LoginResponse {
-  userId: number;
-  username: string;
-  fullName: string;
-  email: string;
-  role: string;
-  message: string;
-  token: string;
-}
+import { ApiResponseAuthResponse, AuthResponse } from "@/features/auth/types";
 
 export async function loginService(
   username: string,
   password: string,
-): Promise<LoginResponse> {
-  const response = await apiClient.post<LoginResponse>(
-    "/auth/login",
+): Promise<AuthResponse> {
+  const response = await apiClient.post<ApiResponseAuthResponse>(
+    "/v1/authentications/sessions",
     {
       username,
       password,
     },
   );
-  if (response.status === 200) {
-    setAccessToken(response.data.token);
-    return response.data;
+  if (response.status === 200 && response.data.success) {
+    setAccessToken(response.data.data.token);
+    return response.data.data;
   }
-  throw new Error("Login failed with status " + response.status);
+  throw new Error(response.data.message || "Login failed");
 }

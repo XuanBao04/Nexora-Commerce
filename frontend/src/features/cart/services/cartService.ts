@@ -2,7 +2,7 @@ import apiClient from "@/services/api/apiClient";
 import { CartResponse, CartItemRequest } from "../types/cart";
 import { ApiResponse } from "@/types/apiResponse";
 
-const CART_API = "/cart";
+const CART_API = "/v1/carts";
 
 export const cartService = {
   /**
@@ -21,7 +21,7 @@ export const cartService = {
     item: CartItemRequest,
   ): Promise<CartResponse> {
     const response = await apiClient.post<ApiResponse<CartResponse>>(
-      `${CART_API}/${userId}/add`,
+      `${CART_API}/${userId}/items`,
       item,
     );
     return response.data.data;
@@ -32,10 +32,10 @@ export const cartService = {
    */
   async removeFromCart(
     userId: string,
-    cartItemId: number,
+    productId: string,
   ): Promise<CartResponse> {
     const response = await apiClient.delete<ApiResponse<CartResponse>>(
-      `${CART_API}/${userId}/items/${cartItemId}`,
+      `${CART_API}/${userId}/items/${productId}`,
     );
     return response.data.data;
   },
@@ -45,12 +45,12 @@ export const cartService = {
    */
   async updateCartItem(
     userId: string,
-    cartItemId: number,
+    productId: string,
     quantity: number,
   ): Promise<CartResponse> {
     try {
       const response = await apiClient.patch<ApiResponse<CartResponse>>(
-        `${CART_API}/${userId}/items/${cartItemId}`,
+        `${CART_API}/${userId}/items/${productId}/quantity`,
         { quantity: quantity },
       );
       return response.data.data;

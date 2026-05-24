@@ -76,6 +76,12 @@ public class ProductServiceImpl implements IProductService {
     }
 
     @Override
+    public Page<ProductResponse> getProductsWithFilters(String keyword, Long categoryId, Long brandId, Long minPrice, Long maxPrice, Pageable pageable) {
+        return productRepository.findProductsWithFilters(keyword, categoryId, brandId, minPrice, maxPrice, pageable)
+                .map(productMapper::toProductResponse);
+    }
+
+    @Override
     public Integer getAvailableStock(String productId) {
         // Verify product exists
         getProductEntityById(productId);

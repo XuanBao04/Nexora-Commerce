@@ -1,0 +1,3133 @@
+openapi: 3.0.1
+info:
+  title: Nexora-Commerce REST API
+  description: E-Commerce high-performance RESTful API documentation for frontend
+    integration.
+  contact:
+    name: Nexora Core Dev Team
+    email: dev@nexoracommerce.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  version: 1.0.0
+servers:
+- url: http://localhost:8080
+  description: Generated server url
+security:
+- bearerAuth: []
+tags:
+- name: Authentication Module
+  description: Endpoints for user session login, registration, token refresh, and
+    profiles
+- name: Product Module
+  description: Endpoints for catalog, pricing, and variant administration
+- name: Category Module
+  description: Endpoints for category hierarchies, list retrieval, and administration
+- name: Cart Module
+  description: Endpoints for active user shopping carts, adding/removing items, and
+    clearing carts
+- name: Order Module
+  description: Endpoints for order calculation previews, creation, user history listings,
+    cancellations, and status management
+paths:
+  /api/v1/users/{userId}/profile:
+    get:
+      tags:
+      - user-controller
+      operationId: getUserProfile
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseUserProfileResponse'
+    put:
+      tags:
+      - user-controller
+      operationId: updateProfile
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseUserProfileResponse'
+  /api/v1/users/{userId}/addresses/{addressId}:
+    put:
+      tags:
+      - user-controller
+      operationId: updateAddress
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: addressId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserAddressRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseUserAddressResponse'
+    delete:
+      tags:
+      - user-controller
+      operationId: deleteAddress
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: addressId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+  /api/v1/products/{productId}:
+    get:
+      tags:
+      - Product Module
+      summary: Retrieve product details by product ID
+      description: Fetches complete details for a single product catalog item by its
+        custom code.
+      operationId: getProductById
+      parameters:
+      - name: productId
+        in: path
+        description: The unique product code
+        required: true
+        schema:
+          type: string
+        example: P001
+      responses:
+        '200':
+          description: Product details retrieved successfully
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseProductResponse'
+        '404':
+          description: Product not found under the provided ID
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseProductResponse'
+    put:
+      tags:
+      - Product Module
+      summary: Update an existing product item
+      description: Requires ADMIN role. Modifies properties and uploads/updates product
+        images.
+      operationId: updateProduct
+      parameters:
+      - name: productId
+        in: path
+        description: The unique product code
+        required: true
+        schema:
+          type: string
+        example: P001
+      - name: request
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/ProductFormRequest'
+      responses:
+        '403':
+          description: Insufficient permissions (must be ADMIN)
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseProductResponse'
+        '400':
+          description: Input validation failed
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseProductResponse'
+        '404':
+          description: Product not found
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseProductResponse'
+        '401':
+          description: Authentication token missing or invalid
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseProductResponse'
+        '200':
+          description: Product successfully updated
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseProductResponse'
+      security:
+      - bearerAuth: []
+    delete:
+      tags:
+      - Product Module
+      summary: Delete a single product item
+      description: Requires ADMIN role. Permanently removes a product from the database
+        catalog.
+      operationId: deleteProduct
+      parameters:
+      - name: productId
+        in: path
+        description: The unique product code
+        required: true
+        schema:
+          type: string
+        example: P001
+      responses:
+        '403':
+          description: Insufficient permissions (must be ADMIN)
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+        '404':
+          description: Product not found
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+        '401':
+          description: Authentication token missing or invalid
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+        '200':
+          description: Product deleted successfully
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+      security:
+      - bearerAuth: []
+  /api/v1/coupons/{code}:
+    get:
+      tags:
+      - coupon-controller
+      operationId: getCoupon
+      parameters:
+      - name: code
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseCouponResponse'
+    put:
+      tags:
+      - coupon-controller
+      operationId: updateCoupon
+      parameters:
+      - name: code
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCouponRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseCouponResponse'
+    delete:
+      tags:
+      - coupon-controller
+      operationId: deleteCoupon
+      parameters:
+      - name: code
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+  /api/v1/categories/{categoryId}:
+    put:
+      tags:
+      - Category Module
+      summary: Update an existing category
+      description: Requires ADMIN role. Edits details such as category name, icon,
+        slug, or parent reference.
+      operationId: updateCategory
+      parameters:
+      - name: categoryId
+        in: path
+        description: Category database ID
+        required: true
+        schema:
+          type: integer
+          format: int64
+        example: 12
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryRequest'
+        required: true
+      responses:
+        '400':
+          description: Input validation parameters failed
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseCategoryResponse'
+        '200':
+          description: Category successfully updated
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseCategoryResponse'
+        '404':
+          description: Category not found
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseCategoryResponse'
+        '401':
+          description: Authentication token missing or invalid
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseCategoryResponse'
+        '403':
+          description: Insufficient role permissions (must be ADMIN)
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseCategoryResponse'
+      security:
+      - bearerAuth: []
+    delete:
+      tags:
+      - Category Module
+      summary: Delete an existing category
+      description: Requires ADMIN role. Permanently removes a category and unbinds
+        its children.
+      operationId: deleteCategory
+      parameters:
+      - name: categoryId
+        in: path
+        description: Category database ID
+        required: true
+        schema:
+          type: integer
+          format: int64
+        example: 12
+      responses:
+        '404':
+          description: Category not found
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+        '401':
+          description: Authentication token missing or invalid
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+        '403':
+          description: Insufficient role permissions (must be ADMIN)
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+        '200':
+          description: Category deleted successfully
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+      security:
+      - bearerAuth: []
+  /api/v1/brands/{brandId}:
+    put:
+      tags:
+      - brand-controller
+      operationId: updateBrand
+      parameters:
+      - name: brandId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BrandRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseBrandResponse'
+    delete:
+      tags:
+      - brand-controller
+      operationId: deleteBrand
+      parameters:
+      - name: brandId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+  /api/v1/admin/stocks/{productId}:
+    get:
+      tags:
+      - admin-stock-controller
+      operationId: getProductStock
+      parameters:
+      - name: productId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseStockStatus'
+    put:
+      tags:
+      - admin-stock-controller
+      operationId: setProductStock
+      parameters:
+      - name: productId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StockQuantityRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+    delete:
+      tags:
+      - admin-stock-controller
+      operationId: deleteProductStock
+      parameters:
+      - name: productId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+  /api/v1/wishlists/{userId}/items:
+    post:
+      tags:
+      - wishlist-controller
+      operationId: addToWishlist
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WishlistRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseWishlistResponse'
+  /api/v1/users/{userId}/addresses:
+    get:
+      tags:
+      - user-controller
+      operationId: getUserAddresses
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseListUserAddressResponse'
+    post:
+      tags:
+      - user-controller
+      operationId: addUserAddress
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserAddressRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseUserAddressResponse'
+  /api/v1/reviews:
+    post:
+      tags:
+      - product-review-controller
+      operationId: createReview
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductReviewRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseProductReviewResponse'
+  /api/v1/products:
+    get:
+      tags:
+      - Product Module
+      summary: Search products by keyword
+      description: Performs a text-based fuzzy search for products containing the
+        keyword in their name or description.
+      operationId: getAllProducts_1
+      parameters:
+      - name: pageable
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/Pageable'
+      - name: keyword
+        in: query
+        description: Search phrase or term
+        required: true
+        schema:
+          type: string
+        example: iPhone
+      responses:
+        '200':
+          description: Search results page retrieved successfully
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseListProductResponse'
+        '400':
+          description: Missing or empty keyword parameter
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseListProductResponse'
+    post:
+      tags:
+      - Product Module
+      summary: Create a new product item
+      description: Requires ADMIN role. Stores a new product entry along with multipart
+        image file attachments.
+      operationId: createProduct
+      parameters:
+      - name: request
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/ProductFormRequest'
+      responses:
+        '403':
+          description: Insufficient permissions (must be ADMIN)
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseProductResponse'
+        '400':
+          description: Input validation failed
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseProductResponse'
+        '201':
+          description: Product successfully created
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseProductResponse'
+        '401':
+          description: Authentication token missing or invalid
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseProductResponse'
+      security:
+      - bearerAuth: []
+    delete:
+      tags:
+      - Product Module
+      summary: Bulk delete products (Disabled)
+      description: Requires ADMIN role. Always fails with a 403 status to prevent
+        bulk deletion accidents.
+      operationId: deleteAllProducts
+      responses:
+        '403':
+          description: Bulk deletion is disabled for safety
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+      security:
+      - bearerAuth: []
+  /api/v1/orders:
+    get:
+      tags:
+      - Order Module
+      summary: List customer-specific order history
+      description: Fetches a paginated history list of orders for a specific user
+        ID. Requires matching userId or ADMIN role.
+      operationId: getAllOrders_1
+      parameters:
+      - name: pageable
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/Pageable'
+      - name: userId
+        in: query
+        description: Customer ID associated with orders
+        required: true
+        schema:
+          type: string
+        example: USR-001
+      responses:
+        '403':
+          description: Insufficient permissions
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseListOrderResponse'
+        '200':
+          description: Customer orders page retrieved successfully
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseListOrderResponse'
+        '401':
+          description: Authentication token missing or invalid
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseListOrderResponse'
+      security:
+      - bearerAuth: []
+    post:
+      tags:
+      - Order Module
+      summary: Create a new checkout order
+      description: Processes shopping cart details and creates a pending checkout
+        transaction. Requires matching userId or ADMIN role.
+      operationId: createOrder
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderRequest'
+        required: true
+      responses:
+        '201':
+          description: Order successfully created
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseOrderResponse'
+        '403':
+          description: Insufficient role permissions
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseOrderResponse'
+        '400':
+          description: Validation parameters failed or cart empty
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseOrderResponse'
+        '401':
+          description: Authentication token missing or invalid
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseOrderResponse'
+      security:
+      - bearerAuth: []
+  /api/v1/orders/previews:
+    post:
+      tags:
+      - Order Module
+      summary: Generate an order pricing calculation preview
+      description: Computes subtotal, coupon discounts, shipping costs, and final
+        totals before actual placement. Does not alter cart state.
+      operationId: previewOrder
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderRequest'
+        required: true
+      responses:
+        '400':
+          description: Input validation failed
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseOrderPreviewResponse'
+        '200':
+          description: Pricing preview computed successfully
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseOrderPreviewResponse'
+        '403':
+          description: Insufficient role permissions
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseOrderPreviewResponse'
+        '401':
+          description: Authentication token missing or invalid
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseOrderPreviewResponse'
+      security:
+      - bearerAuth: []
+  /api/v1/inventories/{productId}/stock-reservations:
+    post:
+      tags:
+      - inventory-controller
+      operationId: reserveStock
+      parameters:
+      - name: productId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateStockRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+  /api/v1/inventories/{productId}/stock-releases:
+    post:
+      tags:
+      - inventory-controller
+      operationId: releaseStock
+      parameters:
+      - name: productId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateStockRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+  /api/v1/coupons:
+    get:
+      tags:
+      - coupon-controller
+      operationId: getAllCoupons
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseListCouponResponse'
+    post:
+      tags:
+      - coupon-controller
+      operationId: createCoupon
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCouponRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseCouponResponse'
+  /api/v1/checkouts:
+    post:
+      tags:
+      - checkout-controller
+      operationId: checkout
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseOrderResponse'
+  /api/v1/checkouts/orders/{orderId}/payments:
+    post:
+      tags:
+      - checkout-controller
+      operationId: processPayment
+      parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponsePaymentResponse'
+  /api/v1/categories:
+    get:
+      tags:
+      - Category Module
+      summary: Get full category tree structure
+      description: Fetches categories in a hierarchical nested structure (parent-child
+        trees).
+      operationId: getCategoryTree
+      responses:
+        '200':
+          description: Category tree retrieved successfully
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseListCategoryResponse'
+    post:
+      tags:
+      - Category Module
+      summary: Create a new category
+      description: Requires ADMIN role. Adds a new category level to the catalog hierarchy.
+      operationId: createCategory
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryRequest'
+        required: true
+      responses:
+        '400':
+          description: Input validation parameters failed
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseCategoryResponse'
+        '201':
+          description: Category successfully created
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseCategoryResponse'
+        '401':
+          description: Authentication token missing or invalid
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseCategoryResponse'
+        '403':
+          description: Insufficient role permissions (must be ADMIN)
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseCategoryResponse'
+      security:
+      - bearerAuth: []
+  /api/v1/carts/{userId}/items:
+    post:
+      tags:
+      - Cart Module
+      summary: Add an item to the shopping cart
+      description: Requires standard authenticated user matching the userId or ADMIN
+        role. Adds product variant item to cart.
+      operationId: addCartItem
+      parameters:
+      - name: userId
+        in: path
+        description: Customer ID associated with the cart
+        required: true
+        schema:
+          type: string
+        example: USR-001
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CartItemRequest'
+        required: true
+      responses:
+        '400':
+          description: Validation parameters failed or product not found
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseCartResponse'
+        '201':
+          description: Item successfully added to cart
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseCartResponse'
+        '403':
+          description: Insufficient permissions
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseCartResponse'
+        '401':
+          description: Authentication token missing or invalid
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseCartResponse'
+      security:
+      - bearerAuth: []
+  /api/v1/brands:
+    get:
+      tags:
+      - brand-controller
+      operationId: getAllBrands
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseListBrandResponse'
+    post:
+      tags:
+      - brand-controller
+      operationId: createBrand
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BrandRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseBrandResponse'
+  /api/v1/authentications/tokens:
+    post:
+      tags:
+      - Authentication Module
+      summary: Refresh JWT access token
+      description: Generates a new JWT access token using the HttpOnly refresh token
+        cookie.
+      operationId: refresh
+      parameters:
+      - name: refresh_token
+        in: cookie
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseAuthResponse'
+        '401':
+          description: Refresh token missing, invalid, or expired
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseAuthResponse'
+  /api/v1/authentications/sessions:
+    post:
+      tags:
+      - Authentication Module
+      summary: User session login
+      description: Authenticates user credentials. Returns JWT access token in the
+        response and sets a secure HttpOnly refresh token cookie.
+      operationId: login
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+        required: true
+      responses:
+        '401':
+          description: Invalid credentials provided
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseAuthResponse'
+        '400':
+          description: Invalid validation parameters
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseAuthResponse'
+        '200':
+          description: Login successful, tokens generated
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseAuthResponse'
+    delete:
+      tags:
+      - Authentication Module
+      summary: User logout
+      description: Revokes user refresh token and clears the secure HttpOnly cookie.
+      operationId: logout
+      parameters:
+      - name: refresh_token
+        in: cookie
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+  /api/v1/authentications/registrations:
+    post:
+      tags:
+      - Authentication Module
+      summary: Register a new user account
+      description: Creates a new user in the system with default roles.
+      operationId: register
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+        required: true
+      responses:
+        '201':
+          description: Registration successful
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseAuthResponse'
+        '400':
+          description: Validation parameters failed or email already registered
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseAuthResponse'
+  /api/v1/admin/stocks/{productId}/synchronizations:
+    post:
+      tags:
+      - admin-stock-controller
+      operationId: syncProductStock
+      parameters:
+      - name: productId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+  /api/v1/admin/stocks/synchronizations:
+    post:
+      tags:
+      - admin-stock-controller
+      operationId: syncAllStock
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+  /api/v1/admin/reviews/{reviewId}/replies:
+    post:
+      tags:
+      - product-review-controller
+      operationId: replyToReview
+      parameters:
+      - name: reviewId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminReplyRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseProductReviewResponse'
+  /api/v1/orders/{orderId}/status:
+    patch:
+      tags:
+      - Order Module
+      summary: Update order processing status (Admin)
+      description: Requires ADMIN role. Transitions an order to status e.g., PENDING,
+        PROCESSING, COMPLETED, CANCELLED.
+      operationId: updateOrderStatus
+      parameters:
+      - name: orderId
+        in: path
+        description: Order ID to update
+        required: true
+        schema:
+          type: string
+        example: ORD-20260523-999
+      - name: status
+        in: query
+        description: Target status transition state
+        required: true
+        schema:
+          type: string
+        example: COMPLETED
+      responses:
+        '200':
+          description: Order status updated successfully
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseOrderResponse'
+        '403':
+          description: Insufficient permissions (must be ADMIN)
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseOrderResponse'
+        '404':
+          description: Order ID not found
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseOrderResponse'
+        '400':
+          description: Invalid status state transition
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseOrderResponse'
+        '401':
+          description: Authentication token missing or invalid
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseOrderResponse'
+      security:
+      - bearerAuth: []
+  /api/v1/inventories/{productId}/stock:
+    get:
+      tags:
+      - inventory-controller
+      operationId: getStock
+      parameters:
+      - name: productId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseInteger'
+    patch:
+      tags:
+      - inventory-controller
+      operationId: updateStock
+      parameters:
+      - name: productId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateStockRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+  /api/v1/carts/{userId}/items/{productId}/quantity:
+    patch:
+      tags:
+      - Cart Module
+      summary: Update cart item quantity
+      description: Requires standard authenticated user matching the userId or ADMIN
+        role. Updates stock count for a specific product inside the cart.
+      operationId: updateCartItemQuantity
+      parameters:
+      - name: userId
+        in: path
+        description: Customer ID associated with the cart
+        required: true
+        schema:
+          type: string
+        example: USR-001
+      - name: productId
+        in: path
+        description: The unique product code to update
+        required: true
+        schema:
+          type: string
+        example: P001
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateQuantityRequest'
+        required: true
+      responses:
+        '400':
+          description: Invalid quantity or out of stock
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseCartResponse'
+        '200':
+          description: Cart item quantity successfully updated
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseCartResponse'
+        '403':
+          description: Insufficient permissions
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseCartResponse'
+        '401':
+          description: Authentication token missing or invalid
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseCartResponse'
+      security:
+      - bearerAuth: []
+  /api/v1/wishlists/{userId}:
+    get:
+      tags:
+      - wishlist-controller
+      operationId: getWishlist
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: pageable
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/Pageable'
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseListWishlistResponse'
+  /api/v1/variants/{variantSku}/reviews:
+    get:
+      tags:
+      - product-review-controller
+      operationId: getVariantReviews
+      parameters:
+      - name: variantSku
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: pageable
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/Pageable'
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseListProductReviewResponse'
+  /api/v1/security-demos/sql-injections/vulnerable-products:
+    get:
+      tags:
+      - sq-li-controller
+      operationId: searchVulnerable
+      parameters:
+      - name: name
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseListProductResponse'
+  /api/v1/security-demos/sql-injections/secure-products:
+    get:
+      tags:
+      - sq-li-controller
+      operationId: searchSecure
+      parameters:
+      - name: name
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseListProductResponse'
+  /api/v1/products/{productId}/stock:
+    get:
+      tags:
+      - Product Module
+      summary: Get available stock count
+      description: Retrieves current warehouse stock count for a specific product
+        ID.
+      operationId: getAvailableStock
+      parameters:
+      - name: productId
+        in: path
+        description: The unique product code
+        required: true
+        schema:
+          type: string
+        example: P001
+      responses:
+        '200':
+          description: Stock count retrieved successfully
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseInteger'
+        '404':
+          description: Product not found
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseInteger'
+  /api/v1/products/{productId}/availability:
+    get:
+      tags:
+      - Product Module
+      summary: Check product availability status
+      description: Checks whether a product is in stock and available for sale.
+      operationId: isProductAvailable
+      parameters:
+      - name: productId
+        in: path
+        description: The unique product code
+        required: true
+        schema:
+          type: string
+        example: P001
+      responses:
+        '200':
+          description: Availability status checked successfully
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseBoolean'
+        '404':
+          description: Product not found
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseBoolean'
+  /api/v1/orders/{orderId}:
+    get:
+      tags:
+      - Order Module
+      summary: Get single order details
+      description: Fetches complete details for a single order by its ID. Requires
+        matching owner user or ADMIN role.
+      operationId: getOrderById
+      parameters:
+      - name: orderId
+        in: path
+        description: Order ID to look up
+        required: true
+        schema:
+          type: string
+        example: ORD-20260523-999
+      responses:
+        '200':
+          description: Order details successfully found
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseOrderResponse'
+        '404':
+          description: Order ID not found
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseOrderResponse'
+        '403':
+          description: Insufficient permissions
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseOrderResponse'
+        '401':
+          description: Authentication token missing or invalid
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseOrderResponse'
+      security:
+      - bearerAuth: []
+    delete:
+      tags:
+      - Order Module
+      summary: Cancel a customer order
+      description: Cancels an order. Requires matching owner user or ADMIN role.
+      operationId: cancelOrder
+      parameters:
+      - name: orderId
+        in: path
+        description: Order ID to cancel
+        required: true
+        schema:
+          type: string
+        example: ORD-20260523-999
+      responses:
+        '400':
+          description: Order cannot be cancelled in its current state
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseOrderResponse'
+        '404':
+          description: Order ID not found
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseOrderResponse'
+        '403':
+          description: Insufficient permissions
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseOrderResponse'
+        '200':
+          description: Order successfully cancelled
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseOrderResponse'
+        '401':
+          description: Authentication token missing or invalid
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseOrderResponse'
+      security:
+      - bearerAuth: []
+  /api/v1/inventories/{productId}:
+    get:
+      tags:
+      - inventory-controller
+      operationId: getInventoryDetails
+      parameters:
+      - name: productId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseInventoryResponse'
+  /api/v1/inventories/{productId}/availability:
+    get:
+      tags:
+      - inventory-controller
+      operationId: hasEnoughStock
+      parameters:
+      - name: productId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: quantity
+        in: query
+        required: true
+        schema:
+          type: integer
+          format: int32
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseBoolean'
+  /api/v1/csrf-tokens:
+    get:
+      tags:
+      - csrf-controller
+      operationId: csrfToken
+      parameters:
+      - name: csrfToken
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/CsrfToken'
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseCsrfTokenResponse'
+  /api/v1/coupons/{code}/validity:
+    get:
+      tags:
+      - coupon-controller
+      operationId: validateCoupon
+      parameters:
+      - name: code
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseBoolean'
+  /api/v1/coupons/{code}/discounts:
+    get:
+      tags:
+      - coupon-controller
+      operationId: getDiscount
+      parameters:
+      - name: code
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: orderAmount
+        in: query
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseLong'
+  /api/v1/categories/{idOrSlug}:
+    get:
+      tags:
+      - Category Module
+      summary: Get category details by ID or slug
+      description: Finds a category either by its database numerical ID or by its
+        URL slug name.
+      operationId: getCategory
+      parameters:
+      - name: idOrSlug
+        in: path
+        description: Category ID or slug string
+        required: true
+        schema:
+          type: string
+        example: electronics
+      responses:
+        '200':
+          description: Category details successfully found
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseCategoryResponse'
+        '404':
+          description: Category not found
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseCategoryResponse'
+  /api/v1/carts/{userId}:
+    get:
+      tags:
+      - Cart Module
+      summary: Retrieve user shopping cart
+      description: Requires standard authenticated user matching the userId or ADMIN
+        role. Fetches active cart and nested line items.
+      operationId: getCart
+      parameters:
+      - name: userId
+        in: path
+        description: Customer ID associated with the cart
+        required: true
+        schema:
+          type: string
+        example: USR-001
+      responses:
+        '403':
+          description: Insufficient permissions to access this cart
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseCartResponse'
+        '401':
+          description: Authentication token missing or invalid
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseCartResponse'
+        '200':
+          description: Shopping cart retrieved successfully
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseCartResponse'
+      security:
+      - bearerAuth: []
+    delete:
+      tags:
+      - Cart Module
+      summary: Clear the entire shopping cart
+      description: Requires standard authenticated user matching the userId or ADMIN
+        role. Removes all items from active cart.
+      operationId: clearCart
+      parameters:
+      - name: userId
+        in: path
+        description: Customer ID associated with the cart
+        required: true
+        schema:
+          type: string
+        example: USR-001
+      responses:
+        '403':
+          description: Insufficient permissions
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+        '200':
+          description: Cart cleared successfully
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+        '401':
+          description: Authentication token missing or invalid
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+      security:
+      - bearerAuth: []
+  /api/v1/brands/{idOrSlug}:
+    get:
+      tags:
+      - brand-controller
+      operationId: getBrand
+      parameters:
+      - name: idOrSlug
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseBrandResponse'
+  /api/v1/authentications/profiles/current:
+    get:
+      tags:
+      - Authentication Module
+      summary: Get current authenticated user profile
+      description: Requires a valid JWT token. Fetches current session's authenticated
+        user details.
+      operationId: getCurrentUser
+      responses:
+        '401':
+          description: Authentication token missing or invalid
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseAuthResponse'
+        '200':
+          description: Profile details retrieved successfully
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseAuthResponse'
+      security:
+      - bearerAuth: []
+  /api/v1/wishlists/{userId}/items/{productId}:
+    delete:
+      tags:
+      - wishlist-controller
+      operationId: removeFromWishlist
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: productId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+  /api/v1/reviews/{reviewId}:
+    delete:
+      tags:
+      - product-review-controller
+      operationId: deleteReview
+      parameters:
+      - name: reviewId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+  /api/v1/carts/{userId}/items/{productId}:
+    delete:
+      tags:
+      - Cart Module
+      summary: Remove an item from the shopping cart
+      description: Requires standard authenticated user matching the userId or ADMIN
+        role. Removes product reference from cart.
+      operationId: removeCartItem
+      parameters:
+      - name: userId
+        in: path
+        description: Customer ID associated with the cart
+        required: true
+        schema:
+          type: string
+        example: USR-001
+      - name: productId
+        in: path
+        description: The unique product code to remove
+        required: true
+        schema:
+          type: string
+        example: P001
+      responses:
+        '403':
+          description: Insufficient permissions
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseCartResponse'
+        '200':
+          description: Item removed successfully
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseCartResponse'
+        '401':
+          description: Authentication token missing or invalid
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseCartResponse'
+      security:
+      - bearerAuth: []
+  /api/v1/admin/stocks:
+    delete:
+      tags:
+      - admin-stock-controller
+      operationId: clearAllStock
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+components:
+  schemas:
+    UpdateProfileRequest:
+      type: object
+      properties:
+        fullName:
+          maxLength: 100
+          minLength: 0
+          type: string
+        email:
+          maxLength: 100
+          minLength: 0
+          type: string
+        password:
+          maxLength: 2147483647
+          minLength: 6
+          type: string
+    ApiResponseUserProfileResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/UserProfileResponse'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+    PaginationInfo:
+      type: object
+      properties:
+        page:
+          type: integer
+          format: int32
+        pageSize:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+        hasNext:
+          type: boolean
+        hasPrevious:
+          type: boolean
+    UserProfileResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        fullName:
+          type: string
+        email:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        roles:
+          uniqueItems: true
+          type: array
+          items:
+            type: string
+    UserAddressRequest:
+      required:
+      - addressLine
+      - phoneNumber
+      - receiverName
+      type: object
+      properties:
+        receiverName:
+          maxLength: 100
+          minLength: 0
+          type: string
+        phoneNumber:
+          maxLength: 20
+          minLength: 0
+          type: string
+        addressLine:
+          maxLength: 255
+          minLength: 0
+          type: string
+        isDefault:
+          type: boolean
+    ApiResponseUserAddressResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/UserAddressResponse'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+    UserAddressResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        receiverName:
+          type: string
+        phoneNumber:
+          type: string
+        addressLine:
+          type: string
+        isDefault:
+          type: boolean
+    ProductFormRequest:
+      required:
+      - name
+      - price
+      - status
+      type: object
+      properties:
+        id:
+          maxLength: 100
+          minLength: 0
+          type: string
+        name:
+          maxLength: 255
+          minLength: 1
+          type: string
+        description:
+          maxLength: 1000
+          minLength: 0
+          type: string
+        price:
+          type: integer
+          format: int64
+        status:
+          type: string
+        image:
+          type: string
+          format: binary
+    ApiResponseProductResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/ProductResponse'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+    ProductResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: integer
+          format: int64
+        status:
+          type: string
+        imageUrl:
+          type: string
+        imagePublicId:
+          type: string
+    UpdateCouponRequest:
+      type: object
+      properties:
+        discountPercent:
+          maximum: 100
+          minimum: 1
+          type: integer
+          format: int32
+        active:
+          type: boolean
+        minimumOrderAmount:
+          minimum: 0
+          type: integer
+          format: int64
+        expiryDate:
+          type: string
+          format: date-time
+    ApiResponseCouponResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/CouponResponse'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+    CouponResponse:
+      type: object
+      properties:
+        code:
+          type: string
+        discountPercent:
+          type: integer
+          format: int32
+        active:
+          type: boolean
+        minimumOrderAmount:
+          type: integer
+          format: int64
+        expiryDate:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    CategoryRequest:
+      required:
+      - name
+      type: object
+      properties:
+        name:
+          maxLength: 100
+          minLength: 0
+          type: string
+        slug:
+          maxLength: 100
+          minLength: 0
+          type: string
+        parentId:
+          type: integer
+          format: int64
+    ApiResponseCategoryResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/CategoryResponse'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+    CategoryResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        slug:
+          type: string
+        parentId:
+          type: integer
+          format: int64
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/CategoryResponse'
+    BrandRequest:
+      required:
+      - name
+      type: object
+      properties:
+        name:
+          maxLength: 100
+          minLength: 0
+          type: string
+        slug:
+          maxLength: 100
+          minLength: 0
+          type: string
+    ApiResponseBrandResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/BrandResponse'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+    BrandResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        slug:
+          type: string
+    StockQuantityRequest:
+      required:
+      - quantity
+      type: object
+      properties:
+        quantity:
+          minimum: 0
+          type: integer
+          format: int64
+    ApiResponseVoid:
+      type: object
+      properties:
+        success:
+          type: boolean
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          type: object
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+    WishlistRequest:
+      required:
+      - productId
+      type: object
+      properties:
+        productId:
+          type: string
+    ApiResponseWishlistResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/WishlistResponse'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+    WishlistResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        userId:
+          type: string
+        productId:
+          type: string
+        productName:
+          type: string
+        productPrice:
+          type: integer
+          format: int64
+        createdAt:
+          type: string
+          format: date-time
+    ProductReviewRequest:
+      required:
+      - comment
+      - rating
+      - variantSku
+      type: object
+      properties:
+        variantSku:
+          type: string
+        orderId:
+          type: string
+        rating:
+          maximum: 5
+          minimum: 1
+          type: integer
+          format: int32
+        comment:
+          type: string
+        imageUrls:
+          type: array
+          items:
+            type: string
+    ApiResponseProductReviewResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/ProductReviewResponse'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+    ProductReviewResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        userId:
+          type: string
+        username:
+          type: string
+        variantSku:
+          type: string
+        orderId:
+          type: string
+        rating:
+          type: integer
+          format: int32
+        comment:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        imageUrls:
+          type: array
+          items:
+            type: string
+        replies:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductReviewResponse'
+    OrderItemRequest:
+      required:
+      - price
+      - productId
+      - quantity
+      type: object
+      properties:
+        productId:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        price:
+          type: integer
+          format: int64
+    OrderRequest:
+      required:
+      - city
+      - district
+      - orderItems
+      - phoneNumber
+      - shippingAddress
+      - userId
+      - ward
+      type: object
+      properties:
+        userId:
+          type: string
+        orderItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItemRequest'
+        couponCode:
+          maxLength: 50
+          minLength: 0
+          type: string
+        shippingAddress:
+          type: string
+        city:
+          maxLength: 100
+          minLength: 2
+          type: string
+        district:
+          maxLength: 100
+          minLength: 2
+          type: string
+        ward:
+          maxLength: 100
+          minLength: 2
+          type: string
+        postalCode:
+          maxLength: 20
+          minLength: 0
+          type: string
+        phoneNumber:
+          type: string
+    ApiResponseOrderResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/OrderResponse'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+    OrderItemResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        productId:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        price:
+          type: integer
+          format: int64
+    OrderResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItemResponse'
+        subtotal:
+          type: integer
+          format: int64
+        discountAmount:
+          type: integer
+          format: int64
+        shippingFee:
+          type: integer
+          format: int64
+        totalPrice:
+          type: integer
+          format: int64
+        couponCode:
+          type: string
+        status:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        lastModifiedDate:
+          type: string
+          format: date-time
+        shippingAddress:
+          type: string
+        city:
+          type: string
+        district:
+          type: string
+        ward:
+          type: string
+        postalCode:
+          type: string
+        phoneNumber:
+          type: string
+    ApiResponseOrderPreviewResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/OrderPreviewResponse'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+    OrderPreviewResponse:
+      type: object
+      properties:
+        userId:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItemResponse'
+        subtotal:
+          type: integer
+          format: int64
+        discountAmount:
+          type: integer
+          format: int64
+        shippingFee:
+          type: integer
+          format: int64
+        totalPrice:
+          type: integer
+          format: int64
+        couponCode:
+          type: string
+    UpdateStockRequest:
+      required:
+      - quantity
+      type: object
+      properties:
+        quantity:
+          minimum: 1
+          type: integer
+          format: int32
+    CreateCouponRequest:
+      required:
+      - code
+      - discountPercent
+      type: object
+      properties:
+        code:
+          maxLength: 50
+          minLength: 1
+          type: string
+        discountPercent:
+          maximum: 100
+          minimum: 1
+          type: integer
+          format: int32
+        active:
+          type: boolean
+        minimumOrderAmount:
+          type: integer
+          format: int64
+        expiryDate:
+          type: string
+          format: date-time
+    PaymentRequest:
+      required:
+      - paymentMethod
+      - successful
+      type: object
+      properties:
+        paymentMethod:
+          type: string
+        successful:
+          type: boolean
+        transactionId:
+          type: string
+        errorMessage:
+          type: string
+    ApiResponsePaymentResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/PaymentResponse'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+    PaymentResponse:
+      type: object
+      properties:
+        orderId:
+          type: string
+        status:
+          type: string
+        message:
+          type: string
+    CartItemRequest:
+      required:
+      - productId
+      - quantity
+      type: object
+      properties:
+        productId:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+    ApiResponseCartResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/CartResponse'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+    CartItemResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        productId:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        price:
+          type: integer
+          format: int64
+        totalPrice:
+          type: integer
+          format: int64
+        createdAt:
+          type: string
+          format: date-time
+    CartResponse:
+      type: object
+      properties:
+        userId:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CartItemResponse'
+        totalItems:
+          type: integer
+          format: int32
+        totalPrice:
+          type: integer
+          format: int64
+    ApiResponseAuthResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/AuthResponse'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+    AuthResponse:
+      type: object
+      properties:
+        userId:
+          type: string
+        username:
+          type: string
+        fullName:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+        message:
+          type: string
+        token:
+          type: string
+    LoginRequest:
+      required:
+      - password
+      - username
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+    RegisterRequest:
+      required:
+      - password
+      - username
+      type: object
+      properties:
+        username:
+          maxLength: 50
+          minLength: 3
+          type: string
+        password:
+          maxLength: 100
+          minLength: 6
+          type: string
+        fullName:
+          maxLength: 100
+          minLength: 0
+          type: string
+        email:
+          maxLength: 100
+          minLength: 0
+          type: string
+    AdminReplyRequest:
+      required:
+      - comment
+      type: object
+      properties:
+        comment:
+          type: string
+    UpdateQuantityRequest:
+      required:
+      - quantity
+      type: object
+      properties:
+        quantity:
+          type: integer
+          format: int32
+    Pageable:
+      type: object
+      properties:
+        page:
+          minimum: 0
+          type: integer
+          format: int32
+        size:
+          minimum: 1
+          type: integer
+          format: int32
+        sort:
+          type: array
+          items:
+            type: string
+    ApiResponseListWishlistResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/WishlistResponse'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+    ApiResponseListProductReviewResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductReviewResponse'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+    ApiResponseListUserAddressResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserAddressResponse'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+    ApiResponseListProductResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductResponse'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+    ApiResponseInteger:
+      type: object
+      properties:
+        success:
+          type: boolean
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          type: integer
+          format: int32
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+    ApiResponseBoolean:
+      type: object
+      properties:
+        success:
+          type: boolean
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          type: boolean
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+    ApiResponseListOrderResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderResponse'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+    ApiResponseInventoryResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/InventoryResponse'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+    InventoryResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        productId:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        reservedQuantity:
+          type: integer
+          format: int32
+        soldQuantity:
+          type: integer
+          format: int32
+        availableQuantity:
+          type: integer
+          format: int32
+    CsrfToken:
+      type: object
+      properties:
+        headerName:
+          type: string
+        token:
+          type: string
+        parameterName:
+          type: string
+    ApiResponseCsrfTokenResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/CsrfTokenResponse'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+    CsrfTokenResponse:
+      type: object
+      properties:
+        headerName:
+          type: string
+        parameterName:
+          type: string
+        token:
+          type: string
+    ApiResponseListCouponResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/CouponResponse'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+    ApiResponseLong:
+      type: object
+      properties:
+        success:
+          type: boolean
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          type: integer
+          format: int64
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+    ApiResponseListCategoryResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/CategoryResponse'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+    ApiResponseListBrandResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/BrandResponse'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+    ApiResponseStockStatus:
+      type: object
+      properties:
+        success:
+          type: boolean
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/StockStatus'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+    StockStatus:
+      type: object
+      properties:
+        productId:
+          type: string
+        redisStock:
+          type: integer
+          format: int64
+        locked:
+          type: boolean
+        lastSyncTimestamp:
+          type: integer
+          format: int64
+  securitySchemes:
+    bearerAuth:
+      type: http
+      description: Please paste your JWT Access Token in the box below to authorize.
+      name: bearerAuth
+      scheme: bearer
+      bearerFormat: JWT

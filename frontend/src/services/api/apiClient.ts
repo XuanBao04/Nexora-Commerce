@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from "axios";
+import { ApiResponseAuthResponse } from "@/features/auth/types";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080/api";
 
@@ -19,43 +20,15 @@ export const setAccessToken = (token: string | null) => {
 
 export const getAccessToken = () => accessToken;
 
-export const refreshSession = async (): Promise<string | null> => {
-  try {
-    const { data } = await axios.post(`${API_URL}/auth/refresh`, {}, { withCredentials: true });
-    const newAccessToken = data.token;
-    setAccessToken(newAccessToken);
-    return newAccessToken;
-  } catch (err) {
-    setAccessToken(null);
-    if (localStorage.getItem("userId")) {
-      localStorage.removeItem("userId");
-      localStorage.removeItem("role");
-      localStorage.removeItem("username");
-      window.location.href = "/login";
-    }
-    return null;
-  }
-};
-
-// Interceptor to attach the access token to requests
-apiClient.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => {
-    if (accessToken) {
-      config.headers.Authorization = `Bearer ${accessToken}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error),
-);
-
 // Variables to handle concurrent requests when refreshing token
+let activeRefreshPromise: Promise<string | null> | null = null;
 let isRefreshing = false;
 let failedQueue: Array<{
   resolve: (value?: unknown) => void;
   reject: (reason?: unknown) => void;
 }> = [];
 
-const processQueue = (error: any, token: string | null = null) => {
+const processQueue = (error: unknown, token: string | null = null) => {
   failedQueue.forEach((prom) => {
     if (error) {
       prom.reject(error);
@@ -66,18 +39,95 @@ const processQueue = (error: any, token: string | null = null) => {
   failedQueue = [];
 };
 
+export const refreshSession = async (): Promise<string | null> => {
+  if (activeRefreshPromise) {
+    return activeRefreshPromise;
+  }
+
+  isRefreshing = true;
+  activeRefreshPromise = (async () => {
+    try {
+      const { data } = await axios.post<ApiResponseAuthResponse>(
+        `${API_URL}/v1/authentications/tokens`,
+        {},
+        { withCredentials: true }
+      );
+      const newAccessToken = data.data.token;
+      setAccessToken(newAccessToken);
+      processQueue(null, newAccessToken);
+      return newAccessToken;
+    } catch (err) {
+      setAccessToken(null);
+      processQueue(err, null);
+      
+      // Only wipe session and redirect to login if it is a genuine auth error (400 or 401)
+      const isAuthError =
+        axios.isAxiosError(err) &&
+        err.response &&
+        (err.response.status === 400 || err.response.status === 401);
+      
+      if (isAuthError && localStorage.getItem("userId")) {
+        localStorage.removeItem("userId");
+        localStorage.removeItem("role");
+        localStorage.removeItem("username");
+        localStorage.removeItem("email");
+        localStorage.removeItem("fullName");
+        window.location.href = "/login";
+      }
+      return null;
+    } finally {
+      activeRefreshPromise = null;
+      isRefreshing = false;
+    }
+  })();
+
+  return activeRefreshPromise;
+};
+
+// Interceptor to attach the access token to requests
+apiClient.interceptors.request.use(
+  (config: InternalAxiosRequestConfig) => {
+    if (config.url?.includes('/v1/authentications/sessions')) {
+      return config;
+    }
+    if (accessToken) {
+      config.headers.Authorization = `Bearer ${accessToken}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error),
+);
+
 // Interceptor to handle 401 Unauthorized and auto-refresh token
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
+    // Explicitly reject session endpoint failures immediately without side effects
+    if (originalRequest?.url?.includes('/v1/authentications/sessions')) {
+      return Promise.reject(error);
+    }
+
+    // Infinite HTTP 401 Loop Guard: If the refresh token request itself fails with 401
+    if (error.response?.status === 401 && originalRequest?.url?.includes('/v1/authentications/tokens')) {
+      processQueue(error, null);
+      setAccessToken(null);
+      localStorage.removeItem("userId");
+      localStorage.removeItem("role");
+      localStorage.removeItem("username");
+      localStorage.removeItem("email");
+      localStorage.removeItem("fullName");
+      window.location.href = "/login";
+      return Promise.reject(error);
+    }
+
     if (
       error.response?.status === 401 &&
       originalRequest &&
       !originalRequest._retry &&
-      !originalRequest.url?.includes('/auth/login') &&
-      !originalRequest.url?.includes('/auth/refresh')
+      !originalRequest.url?.includes('/v1/authentications/sessions') &&
+      !originalRequest.url?.includes('/v1/authentications/tokens')
     ) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
@@ -91,36 +141,24 @@ apiClient.interceptors.response.use(
       }
 
       originalRequest._retry = true;
-      isRefreshing = true;
 
       try {
-        const { data } = await axios.post(`${API_URL}/auth/refresh`, {}, { withCredentials: true });
-        
-        const newAccessToken = data.token;
-        setAccessToken(newAccessToken);
-        
-        processQueue(null, newAccessToken);
-        
-        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-        return apiClient(originalRequest);
+        const newAccessToken = await refreshSession();
+        if (newAccessToken) {
+          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+          return apiClient(originalRequest);
+        } else {
+          const err = new Error("Session refresh failed");
+          return Promise.reject(err);
+        }
       } catch (err) {
-        processQueue(err, null);
-        setAccessToken(null);
-        
-        // Clear local storage and redirect to login
-        localStorage.removeItem("userId");
-        localStorage.removeItem("role");
-        localStorage.removeItem("username");
-        window.location.href = "/login";
-        
         return Promise.reject(err);
-      } finally {
-        isRefreshing = false;
       }
     }
 
     return Promise.reject(error);
   }
 );
+
 
 export default apiClient;

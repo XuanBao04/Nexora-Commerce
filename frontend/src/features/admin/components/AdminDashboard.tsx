@@ -4,37 +4,25 @@ import InventoryManagement from '@features/inventory/components/InventoryManagem
 import OrderManagement from '@features/orders/components/OrderManagement';
 import CouponManagement from '@features/coupon/components/CouponManagement';
 import ProductManagement from '@features/products/components/ProductManagement';
-import { FaBox, FaClipboardList, FaSignOutAlt, FaStore, FaTag } from "react-icons/fa";
-import apiClient, { setAccessToken } from '@services/api/apiClient';
+import CategoryManagement from '@features/products/components/CategoryManagement';
+import BrandManagement from '@features/products/components/BrandManagement';
+import { FaBox, FaClipboardList, FaSignOutAlt, FaStore, FaTag, FaFolder, FaStar } from "react-icons/fa";
+import { useAuthStore } from "@/store/useAuthStore";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const [username, setUsername] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"products" | "inventory" | "orders" | "coupons">("products");
+  const { role, username, logout } = useAuthStore();
+  const [activeTab, setActiveTab] = useState<"products" | "inventory" | "orders" | "coupons" | "categories" | "brands">("products");
 
   useEffect(() => {
-    const role = localStorage.getItem("role");
-    const storedUsername = localStorage.getItem("username");
-
-    if (role !== "ADMIN") {
+    if (role !== "ROLE_ADMIN" && role !== "ADMIN") {
       navigate("/login", { replace: true });
       return;
     }
-
-    setUsername(storedUsername);
-  }, [navigate]);
+  }, [role, navigate]);
 
   const handleLogout = async () => {
-    try {
-      await apiClient.post("/auth/logout");
-    } catch {
-      // Continue with client-side logout even if server logout fails
-    }
-    localStorage.removeItem("userId");
-    localStorage.removeItem("role");
-    localStorage.removeItem("username");
-    setAccessToken(null);
-    navigate("/login", { replace: true });
+    await logout();
   };
 
   return (
@@ -131,6 +119,29 @@ const AdminDashboard = () => {
             <FaTag className="h-3.5 w-3.5" />
             Quản lý mã giảm giá
           </button>
+          <button
+            onClick={() => setActiveTab("categories")}
+            className={`inline-flex h-11 items-center gap-2 rounded-xl px-4 text-xs font-bold uppercase tracking-wider transition-all duration-200 active:scale-95 ${
+              activeTab === "categories"
+                ? "bg-zinc-950 text-white shadow-md"
+                : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950"
+            }`}
+          >
+            <FaFolder className="h-3.5 w-3.5" />
+            Danh mục
+          </button>
+
+          <button
+            onClick={() => setActiveTab("brands")}
+            className={`inline-flex h-11 items-center gap-2 rounded-xl px-4 text-xs font-bold uppercase tracking-wider transition-all duration-200 active:scale-95 ${
+              activeTab === "brands"
+                ? "bg-zinc-950 text-white shadow-md"
+                : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950"
+            }`}
+          >
+            <FaStar className="h-3.5 w-3.5" />
+            Thương hiệu
+          </button>
         </div>
 
         {/* Active view renderer */}
@@ -146,6 +157,12 @@ const AdminDashboard = () => {
           </div>
           <div className={activeTab === "coupons" ? "block" : "hidden"}>
             <CouponManagement />
+          </div>
+          <div className={activeTab === "categories" ? "block" : "hidden"}>
+            <CategoryManagement />
+          </div>
+          <div className={activeTab === "brands" ? "block" : "hidden"}>
+            <BrandManagement />
           </div>
         </div>
       </main>

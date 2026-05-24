@@ -63,7 +63,7 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.ok(authResponse, "Login successful"));
     }
 
-    @RateLimited(maxRequests = 5, windowSeconds = 60)
+    @RateLimited(maxRequests = 100, windowSeconds = 60)
     @PostMapping("/registrations")
     @Operation(
         summary = "Register a new user account",

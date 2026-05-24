@@ -5,6 +5,7 @@ public record ProductResponse(
     String name,
     String description,
     Long price,
+    Integer quantity,
     String status,
     String imageUrl,
     String imagePublicId

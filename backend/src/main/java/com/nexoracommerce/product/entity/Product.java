@@ -102,6 +102,17 @@ public class Product {
                 );
     }
 
+    public Integer getQuantity() {
+        if (variants == null || variants.isEmpty()) {
+            return null;
+        }
+        return variants.stream()
+                .filter(v -> v.getSku().equals(this.id))
+                .findFirst()
+                .map(ProductVariant::getQuantity)
+                .orElse(variants.get(0).getQuantity());
+    }
+
     public String getImageUrl() {
         if (images == null || images.isEmpty()) {
             return null;

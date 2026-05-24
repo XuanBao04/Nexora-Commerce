@@ -2,7 +2,7 @@ import apiClient from "@/services/api/apiClient";
 import { InventoryItem } from "../types/inventory";
 import { ApiResponse } from "@/types/apiResponse";
 
-const INVENTORY_API = "/inventory";
+const INVENTORY_API = "/v1/inventories";
 
 export const inventoryService = {
   /**
@@ -12,7 +12,7 @@ export const inventoryService = {
    */
   async getStock(productId: string): Promise<number> {
     const response = await apiClient.get<ApiResponse<number>>(
-      `${INVENTORY_API}/${productId}`,
+      `${INVENTORY_API}/${productId}/stock`,
     );
     return response.data.data;
   },
@@ -24,7 +24,7 @@ export const inventoryService = {
    */
   async getInventoryDetails(productId: string): Promise<InventoryItem> {
     const response = await apiClient.get<ApiResponse<InventoryItem>>(
-      `${INVENTORY_API}/${productId}/details`,
+      `${INVENTORY_API}/${productId}`,
     );
     return response.data.data;
   },
@@ -39,7 +39,7 @@ export const inventoryService = {
     quantity: number,
   ): Promise<void> {
     await apiClient.patch<ApiResponse<void>>(
-      `${INVENTORY_API}/${productId}`,
+      `${INVENTORY_API}/${productId}/stock`,
       { quantity },
     );
   },
@@ -57,12 +57,12 @@ export const inventoryService = {
   ): Promise<boolean> {
     try {
       const response = await apiClient.get<ApiResponse<boolean>>(
-        `${INVENTORY_API}/${productId}/check`,
+        `${INVENTORY_API}/${productId}/availability`,
         { params: { quantity: requiredQuantity } }
       );
       return response.data.data;
     } catch (error) {
-      // Fallback to getStock if /check endpoint is not available or fails
+      // Fallback to getStock if /availability endpoint is not available or fails
       const stock = await this.getStock(productId);
       return stock >= requiredQuantity;
     }

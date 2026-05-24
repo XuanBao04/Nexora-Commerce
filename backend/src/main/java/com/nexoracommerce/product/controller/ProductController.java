@@ -9,6 +9,7 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
@@ -44,37 +45,26 @@ public class ProductController {
 
     @GetMapping
     @Operation(
-        summary = "Retrieve all product catalog items with pagination",
-        description = "Fetches a page of products sorted by ID in ascending order by default."
+        summary = "Retrieve all product catalog items with optional filtering and search",
+        description = "Fetches a page of products sorted by ID in ascending order by default. Supports optional filtering by categoryId, brandId, and fuzzy searching by keyword."
     )
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Products page retrieved successfully")
     })
     public ResponseEntity<ApiResponse<List<ProductResponse>>> getAllProducts(
-            @PageableDefault(size = 10, sort = "id", direction = Sort.Direction.ASC) Pageable pageable) {
-        Page<ProductResponse> productPage = productService.getAllProductsPageable(pageable);
-        return ResponseEntity.ok(
-                ApiResponse.okWithPagination(
-                        productPage.getContent(),
-                        ApiResponse.PaginationInfo.from(productPage)
-                )
-        );
-    }
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) Long brandId,
+            @RequestParam(required = false) Long minPrice,
+            @RequestParam(required = false) Long maxPrice,
+            @PageableDefault(size = 12, sort = "id", direction = Sort.Direction.ASC) Pageable pageable) {
+        
+        // Hard limit protection against DoS (Max page size is 50, defaults to 12 if exceeded)
+        if (pageable.getPageSize() > 50) {
+            pageable = PageRequest.of(pageable.getPageNumber(), 12, pageable.getSort());
+        }
 
-    @GetMapping(params = "keyword")
-    @Operation(
-        summary = "Search products by keyword",
-        description = "Performs a text-based fuzzy search for products containing the keyword in their name or description."
-    )
-    @ApiResponses({
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Search results page retrieved successfully"),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Missing or empty keyword parameter")
-    })
-    public ResponseEntity<ApiResponse<List<ProductResponse>>> searchProducts(
-            @Parameter(description = "Search phrase or term", example = "iPhone")
-            @NotBlank(message = "Search keyword is required") @RequestParam String keyword,
-            @PageableDefault(size = 10) Pageable pageable) {
-        Page<ProductResponse> productPage = productService.searchProductsByNamePageable(keyword, pageable);
+        Page<ProductResponse> productPage = productService.getProductsWithFilters(keyword, categoryId, brandId, minPrice, maxPrice, pageable);
         return ResponseEntity.ok(
                 ApiResponse.okWithPagination(
                         productPage.getContent(),

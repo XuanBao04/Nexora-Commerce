@@ -4,7 +4,7 @@ import { productService } from "@/features/products/services/productService";
 import { OrderResponse } from "../types/order";
 import PriceBreakdown from "@/features/cart/components/PriceBreakdown";
 import { formatPrice } from "@/features/cart/utils/priceCalculation";
-import { FaChevronLeft, FaChevronRight, FaChevronDown, FaClipboardList, FaRegCalendarAlt, FaShippingFast, FaCheckCircle, FaExclamationTriangle } from "react-icons/fa";
+import { FaChevronLeft, FaChevronRight, FaChevronDown, FaClipboardList, FaRegCalendarAlt, FaShippingFast, FaCheckCircle, FaExclamationTriangle, FaTimes } from "react-icons/fa";
 
 const getStatusBadgeClass = (status: OrderResponse["status"]) => {
   switch (status) {
@@ -45,6 +45,7 @@ export default function Order() {
   const [orders, setOrders] = useState<OrderResponse[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [cancelingOrderId, setCancelingOrderId] = useState<string | null>(null);
+  const [confirmingOrderId, setConfirmingOrderId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [productMap, setProductMap] = useState<Record<string, { name: string; imageUrl?: string }>>({});
@@ -107,6 +108,26 @@ export default function Order() {
       setError(errorMessage);
     } finally {
       setCancelingOrderId(null);
+    }
+  };
+
+  const handleConfirmDelivery = async (orderId: string) => {
+    const confirm = window.confirm("Xác nhận bạn đã nhận được hàng?");
+    if (!confirm) return;
+    
+    setConfirmingOrderId(orderId);
+    setError(null);
+
+    try {
+      const updatedOrder = await orderService.confirmDelivery(orderId);
+      setOrders((prev) =>
+        prev.map((order) => (order.id === orderId ? updatedOrder : order)),
+      );
+    } catch (err: Error | unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Xác nhận nhận hàng thất bại.";
+      setError(errorMessage);
+    } finally {
+      setConfirmingOrderId(null);
     }
   };
 
@@ -249,6 +270,46 @@ export default function Order() {
               {isExpanded && (
                 <div className="space-y-6 border-t border-zinc-100 bg-zinc-50/40 p-6 animate-slide-down">
                   
+                  {/* Visual Timeline */}
+                  <div className="bg-white/80 p-5 rounded-2xl border border-zinc-200/40 shadow-sm">
+                    <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-4">Hành trình đơn hàng</h4>
+                    <div className="flex items-center justify-between relative px-2">
+                      <div className="absolute top-2 left-4 right-4 h-0.5 bg-zinc-200 -z-0"></div>
+                      {[
+                        { status: 'PENDING', label: 'Chờ xác nhận' },
+                        { status: 'PROCESSING', label: 'Đang xử lý' },
+                        { status: 'SHIPPED', label: 'Đang giao' },
+                        { status: 'DELIVERED', label: 'Đã giao' }
+                      ].map((step, index) => {
+                        const statusFlow = ['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED'];
+                        const currentStatusIndex = order.status === 'CANCELLED' ? -1 : statusFlow.indexOf(order.status);
+                        const isCompleted = currentStatusIndex >= index;
+                        const isCurrent = currentStatusIndex === index;
+                        const isCancelled = order.status === 'CANCELLED';
+
+                        return (
+                          <div key={step.status} className="flex flex-col items-center gap-2 z-10">
+                            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center bg-white transition-colors duration-300 ${
+                              isCancelled 
+                                ? 'border-rose-400 bg-rose-50' 
+                                : isCompleted 
+                                  ? 'border-emerald-500 bg-emerald-500' 
+                                  : 'border-zinc-300'
+                            }`}>
+                              {isCompleted && !isCancelled && <FaCheckCircle className="text-white w-2.5 h-2.5" />}
+                              {isCancelled && <FaTimes className="text-rose-400 w-2 h-2" />}
+                            </div>
+                            <span className={`text-[9px] font-bold uppercase tracking-wider text-center max-w-[60px] ${
+                              isCurrent ? 'text-zinc-900' : 'text-zinc-400'
+                            }`}>
+                              {step.label}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  
                   {/* Coupon Indicator Banner */}
                   {order.couponCode && (
                     <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200/50 bg-emerald-50/60 px-3.5 py-1 text-[10px] font-black uppercase tracking-widest text-emerald-700">
@@ -357,6 +418,16 @@ export default function Order() {
 
                   {/* Actions Bar */}
                   <div className="flex justify-end gap-2 border-t border-zinc-100 pt-5">
+                    {order.status === "SHIPPED" && (
+                      <button
+                        onClick={() => handleConfirmDelivery(order.id)}
+                        disabled={confirmingOrderId === order.id}
+                        className="btn-primary h-10 px-5 text-xs font-bold uppercase tracking-wider mr-auto disabled:opacity-70 disabled:cursor-not-allowed"
+                      >
+                        {confirmingOrderId === order.id ? "Đang xử lý..." : "Đã nhận được hàng"}
+                      </button>
+                    )}
+                    
                     <button
                       onClick={() => handleCancelOrder(order.id)}
                       disabled={!isPending || isCancelling}

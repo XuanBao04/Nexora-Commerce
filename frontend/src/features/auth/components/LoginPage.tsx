@@ -1,46 +1,53 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { FaLock, FaStore, FaUser, FaCompass, FaShieldAlt, FaBolt, FaEye, FaEyeSlash } from "react-icons/fa";
-import { loginService } from "../services/loginService";
+import { useAuthStore } from "@/store/useAuthStore";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+
+const loginSchema = z.object({
+  username: z.string().min(1, "Tên đăng nhập không được để trống"),
+  password: z.string().min(1, "Mật khẩu không được để trống"),
+});
+
+type LoginValues = z.infer<typeof loginSchema>;
 
 const LoginPage = () => {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
+  const { user, login } = useAuthStore();
+
+  const form = useForm<LoginValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      username: "",
+      password: "",
+    },
+  });
 
   useEffect(() => {
-    const storedUserId = localStorage.getItem("userId");
-    if (storedUserId) {
-      navigate("/authenticated/products", { replace: true });
+    if (user) {
+      if (user.role === "ROLE_ADMIN") {
+        navigate("/admin/dashboard", { replace: true });
+      } else {
+        navigate("/authenticated/products", { replace: true });
+      }
     }
-  }, [navigate]);
+  }, [user, navigate]);
 
-  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-
-    if (!username && !password) {
-      toast.error("Vui lòng nhập đầy đủ thông tin đăng nhập.");
-      return;
-    } else if (username.trim() && !password.trim()) {
-      toast.error("Mật khẩu không được để trống.");
-      return;
-    } else if (!username.trim() && password.trim()) {
-      toast.error("Tên đăng nhập không được để trống.");
-      return;
-    }
-
+  const onSubmit = async (values: LoginValues) => {
     setIsSubmitting(true);
     try {
-      const response = await loginService(username.trim(), password.trim());
+      const response = await login(values.username.trim(), values.password.trim());
       if (response) {
-        localStorage.setItem("userId", response.userId.toString());
-        localStorage.setItem("role", response.role);
-        localStorage.setItem("username", response.username);
-
-        if (response.role === "ADMIN") {
+        toast.success("Đăng nhập thành công!");
+        if (response.role === "ROLE_ADMIN") {
           navigate("/admin/dashboard", { replace: true });
         } else {
           navigate("/authenticated/products", { replace: true });
@@ -107,59 +114,74 @@ const LoginPage = () => {
             </p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-5">
-            <div>
-              <label className="label">Tên đăng nhập</label>
-              <div className="relative">
-                <FaUser className="pointer-events-none absolute left-4 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400" />
-                <input
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="field pl-11"
-                  placeholder="Nhập tên đăng nhập của bạn"
-                  name="username"
-                  autoComplete="username"
-                />
-              </div>
-            </div>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+              <FormField
+                control={form.control}
+                name="username"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tên đăng nhập</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <FaUser className="pointer-events-none absolute left-4 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400 z-10" />
+                        <Input
+                          {...field}
+                          className="pl-11 h-12 rounded-xl border-zinc-200/60 bg-zinc-50/50"
+                          placeholder="Nhập tên đăng nhập của bạn"
+                          autoComplete="username"
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <div>
-              <label className="label">Mật khẩu</label>
-              <div className="relative">
-                <FaLock className="pointer-events-none absolute left-4 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400" />
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="field pl-11 pr-10"
-                  placeholder="Nhập mật khẩu"
-                  name="password"
-                  autoComplete="current-password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 focus:outline-none transition-colors"
-                  aria-label={showPassword ? "Ẩn mật khẩu" : "Hiển thị mật khẩu"}
-                >
-                  {showPassword ? (
-                    <FaEyeSlash className="h-4 w-4" />
-                  ) : (
-                    <FaEye className="h-4 w-4" />
-                  )}
-                </button>
-              </div>
-            </div>
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Mật khẩu</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <FaLock className="pointer-events-none absolute left-4 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400 z-10" />
+                        <Input
+                          {...field}
+                          type={showPassword ? "text" : "password"}
+                          className="pl-11 pr-10 h-12 rounded-xl border-zinc-200/60 bg-zinc-50/50"
+                          placeholder="Nhập mật khẩu"
+                          autoComplete="current-password"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 focus:outline-none transition-colors z-10"
+                          aria-label={showPassword ? "Ẩn mật khẩu" : "Hiển thị mật khẩu"}
+                        >
+                          {showPassword ? (
+                            <FaEyeSlash className="h-4 w-4" />
+                          ) : (
+                            <FaEye className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <button type="submit" className="btn-primary w-full mt-6 h-12 rounded-xl" disabled={isSubmitting}>
-              {isSubmitting ? (
-                <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-              ) : (
-                "Đăng nhập tài khoản"
-              )}
-            </button>
-          </form>
+              <Button type="submit" className="w-full mt-6 h-12 rounded-xl bg-zinc-950 hover:bg-zinc-800" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                ) : (
+                  "Đăng nhập tài khoản"
+                )}
+              </Button>
+            </form>
+          </Form>
 
           <div className="mt-8 text-center text-sm font-semibold text-zinc-500">
             Chưa có tài khoản?{" "}

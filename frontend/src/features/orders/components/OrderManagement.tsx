@@ -4,7 +4,7 @@ import { inventoryService } from "@/features/inventory/services/inventoryService
 import { productService } from "@/features/products/services/productService";
 import { OrderResponse } from "../types/order";
 import { formatPrice } from "@/features/cart/utils/priceCalculation";
-import { FaSync, FaChevronDown, FaCheck, FaTimes, FaCalendarAlt, FaClipboardList, FaUser, FaShieldAlt, FaExclamationTriangle } from "react-icons/fa";
+import { FaSync, FaChevronDown, FaCheck, FaTimes, FaCalendarAlt, FaClipboardList, FaUser, FaShieldAlt, FaExclamationTriangle, FaSearch } from "react-icons/fa";
 import { toast } from "react-toastify";
 
 const ORDER_STATUSES = [
@@ -22,6 +22,7 @@ const OrderManagement = () => {
   const [statusFilter, setStatusFilter] = useState<string>("PENDING");
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const [productMap, setProductMap] = useState<Record<string, { name: string; imageUrl?: string }>>({});
 
   useEffect(() => {
@@ -44,8 +45,8 @@ const OrderManagement = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const allOrders = await orderService.getAllOrders();
-      setOrders(allOrders);
+      const response = await orderService.getAllOrdersPaginated(0, 999, 'createdAt', searchQuery);
+      setOrders(response.items);
     } catch (err) {
       setError((err as Error).message || "Không thể tải danh sách đơn hàng");
     } finally {
@@ -58,6 +59,14 @@ const OrderManagement = () => {
   }, []);
 
   const handleUpdateStatus = async (orderId: string, newStatus: string) => {
+    if (newStatus === 'CANCELLED') {
+      const confirmCancel = window.confirm("Bạn có chắc chắn muốn HỦY đơn hàng này không? Hành động này không thể hoàn tác.");
+      if (!confirmCancel) return;
+    } else {
+      const confirmUpdate = window.confirm(`Cập nhật trạng thái đơn hàng thành ${getStatusInfo(newStatus).label}?`);
+      if (!confirmUpdate) return;
+    }
+
     setUpdatingOrderId(orderId);
     try {
       const updatedOrder = await orderService.updateOrderStatus(orderId, newStatus);
@@ -130,8 +139,23 @@ const OrderManagement = () => {
       )}
 
       {/* Controls */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <select
+      <div className="flex flex-col sm:flex-row gap-4 justify-between">
+        <div className="flex flex-col sm:flex-row gap-4 flex-1">
+          <div className="relative w-full sm:w-80">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <FaSearch className="text-zinc-400" />
+            </div>
+            <input
+              type="text"
+              placeholder="Tìm mã đơn, ID Khách..."
+              className="h-11 w-full pl-10 pr-4 bg-zinc-50 border border-zinc-200/60 focus:bg-white focus:border-zinc-950 focus:ring-4 focus:ring-zinc-900/5 rounded-xl text-xs outline-none transition duration-200 text-zinc-700 font-medium"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && fetchOrders()}
+            />
+          </div>
+          
+          <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
           className="h-11 px-4 bg-zinc-50 border border-zinc-200/60 focus:bg-white focus:border-zinc-950 focus:ring-4 focus:ring-zinc-900/5 rounded-xl text-xs outline-none transition duration-200 text-zinc-500 font-extrabold uppercase tracking-wider w-full sm:w-64"
@@ -152,6 +176,7 @@ const OrderManagement = () => {
           <FaSync className={`w-3 h-3 ${isLoading ? "animate-spin" : ""}`} />
           <span>Làm mới</span>
         </button>
+        </div>
       </div>
 
       {/* Stats Summary Metrics Grid */}

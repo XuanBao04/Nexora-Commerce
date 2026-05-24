@@ -15,8 +15,8 @@ Table users {
   username varchar(50) [not null, unique, note: "Tên đăng nhập duy nhất"]
   password varchar(255) [not null, note: "Mật khẩu mã hóa BCrypt"]
   full_name varchar(100) [note: "Họ và tên"]
-  email varchar(100) [note: "Địa chỉ email"]
-  created_at timestamp [not null, default: `now()`, note: "Thời gian tạo"]
+  email varchar(100) [not null, unique, note: "Địa chỉ email"]
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: "Thời gian tạo"]
 }
 
 Table roles {
@@ -25,8 +25,8 @@ Table roles {
 }
 
 Table users_roles {
-  user_id uuid [ref: > users.id, note: "Mã người dùng"]
-  role_id bigint [ref: > roles.id, note: "Mã vai trò"]
+  user_id uuid [not null, ref: > users.id, note: "Mã người dùng"]
+  role_id bigint [not null, ref: > roles.id, note: "Mã vai trò"]
   
   Indexes {
     (user_id, role_id) [pk]
@@ -35,7 +35,7 @@ Table users_roles {
 
 Table user_addresses {
   id bigint [pk, increment, note: "Khóa chính"]
-  user_id uuid [ref: > users.id, note: "Liên kết tới users"]
+  user_id uuid [not null, ref: > users.id, note: "Liên kết tới users"]
   receiver_name varchar(100) [not null, note: "Tên người nhận"]
   phone_number varchar(20) [not null, note: "Số điện thoại nhận hàng"]
   address_line varchar(255) [not null, note: "Địa chỉ cụ thể"]
@@ -44,14 +44,14 @@ Table user_addresses {
 
 Table refresh_tokens {
   id bigint [pk, increment, note: "Khóa chính"]
-  user_id uuid [ref: > users.id, note: "Liên kết tới users"]
+  user_id uuid [not null, ref: > users.id, note: "Liên kết tới users"]
   token varchar(255) [not null, unique, note: "Mã token refresh"]
   expiry_date timestamp [not null, note: "Thời gian hết hạn"]
 }
 
 Table verification_tokens {
   id bigint [pk, increment, note: "Khóa chính"]
-  user_id uuid [ref: > users.id, note: "Liên kết tới users"]
+  user_id uuid [not null, ref: > users.id, note: "Liên kết tới users"]
   token varchar(255) [not null, unique, note: "Mã token xác thực"]
   type varchar(50) [not null, note: "Loại xác thực: EMAIL_VERIFICATION hoặc PASSWORD_RESET"]
   expiry_date timestamp [not null, note: "Thời gian hết hạn"]
@@ -81,6 +81,11 @@ Table products {
   category_id bigint [ref: > categories.id, note: "Mã danh mục"]
   brand_id bigint [ref: > brands.id, note: "Mã thương hiệu"]
   // ĐÃ LOẠI BỎ image_url tại đây để quy về bảng product_images quản lý tập trung
+
+  Indexes {
+    category_id [name: "idx_products_category"]
+    brand_id [name: "idx_products_brand"]
+  }
 }
 
 Table product_attributes {
@@ -90,23 +95,31 @@ Table product_attributes {
 
 Table product_attribute_values {
   id bigint [pk, increment, note: "Khóa chính"]
-  attribute_id bigint [ref: > product_attributes.id, note: "Liên kết tới thuộc tính"]
+  attribute_id bigint [not null, ref: > product_attributes.id, note: "Liên kết tới thuộc tính"]
   value varchar(100) [not null, note: "Giá trị thuộc tính (Đen, 128GB,...)"]
+  
+  Indexes {
+    (attribute_id, value) [unique]
+  }
 }
 
 Table product_variants {
   sku varchar(50) [pk, note: "Mã định danh sản phẩm bán (SKU)"]
-  product_id varchar(50) [ref: > products.id, note: "Liên kết tới sản phẩm gốc"]
+  product_id varchar(50) [not null, ref: > products.id, note: "Liên kết tới sản phẩm gốc"]
   price bigint [not null, note: "Đơn giá (Bắt buộc >= 0)"]
   quantity integer [not null, default: 0, note: "Số lượng thực tế trong kho (Bắt buộc >= 0)"]
   reserved_quantity integer [not null, default: 0, note: "Số lượng đang giữ (Bắt buộc >= 0)"]
   sold_quantity integer [not null, default: 0, note: "Số lượng đã bán thực tế (Bắt buộc >= 0)"]
-  embedding vector [note: "Vector biểu diễn ngữ nghĩa của sản phẩm (Gemini text-embedding-004)"]
+  embedding "vector(768)" [note: "Vector biểu diễn ngữ nghĩa của sản phẩm (Gemini text-embedding-004)"]
+
+  Indexes {
+    product_id [name: "idx_variants_product"]
+  }
 }
 
 Table variant_attribute_values {
-  sku varchar(50) [ref: > product_variants.sku, note: "SKU của biến thể"]
-  value_id bigint [ref: > product_attribute_values.id, note: "Giá trị thuộc tính"]
+  sku varchar(50) [not null, ref: > product_variants.sku, note: "SKU của biến thể"]
+  value_id bigint [not null, ref: > product_attribute_values.id, note: "Giá trị thuộc tính"]
   
   Indexes {
     (sku, value_id) [pk]
@@ -115,7 +128,7 @@ Table variant_attribute_values {
 
 Table product_images {
   id bigint [pk, increment, note: "Khóa chính"]
-  product_id varchar(50) [ref: > products.id, note: "Liên kết sản phẩm gốc"]
+  product_id varchar(50) [not null, ref: > products.id, note: "Liên kết sản phẩm gốc"]
   sku varchar(50) [ref: > product_variants.sku, null, note: "Biến thể cụ thể. Nếu null thì là ảnh chung cho sản phẩm gốc"]
   image_url varchar(255) [not null, note: "Đường dẫn hình ảnh Cloudinary"]
   is_primary boolean [not null, default: false, note: "Ảnh đại diện chính"]
@@ -127,17 +140,26 @@ Table product_images {
 
 Table cart_items {
   id bigint [pk, increment, note: "Khóa chính"]
-  user_id uuid [ref: > users.id, note: "Khách hàng mua"]
-  variant_sku varchar(50) [ref: > product_variants.sku, note: "Biến thể được thêm vào giỏ"]
+  user_id uuid [not null, ref: > users.id, note: "Khách hàng mua"]
+  variant_sku varchar(50) [not null, ref: > product_variants.sku, note: "Biến thể được thêm vào giỏ"]
   quantity integer [not null, note: "Số lượng đặt (Bắt buộc > 0)"]
-  created_at timestamp [not null, default: `now()`, note: "Thời gian thêm"]
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: "Thời gian thêm"]
+  
+  Indexes {
+    (user_id, variant_sku) [unique]
+    user_id [name: "idx_cart_items_user"]
+  }
 }
 
 Table wishlists {
   id bigint [pk, increment, note: "Khóa chính"]
-  user_id uuid [ref: > users.id, note: "Người dùng thích"]
-  product_id varchar(50) [ref: > products.id, note: "Sản phẩm được yêu thích"]
-  created_at timestamp [not null, default: `now()`, note: "Thời gian thích"]
+  user_id uuid [not null, ref: > users.id, note: "Người dùng thích"]
+  product_id varchar(50) [not null, ref: > products.id, note: "Sản phẩm được yêu thích"]
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: "Thời gian thích"]
+  
+  Indexes {
+    (user_id, product_id) [unique]
+  }
 }
 
 // =========================================================================
@@ -150,13 +172,15 @@ Table coupons {
   active boolean [not null, default: true, note: "Trạng thái hoạt động"]
   minimum_order_amount bigint [not null, default: 0, note: "Giá trị đơn tối thiểu áp dụng (Tích hợp từ migration)"]
   expiry_date timestamp [null, note: "Hạn sử dụng (Tích hợp từ migration)"]
-  created_at timestamp [not null, default: `now()`, note: "Thời gian tạo mã"]
-  updated_at timestamp [not null, default: `now()`, note: "Thời gian cập nhật mã"]
+
+  Indexes {
+    (active, expiry_date) [name: "idx_coupons_active_expiry"]
+  }
 }
 
 Table orders {
   id varchar(50) [pk, note: "Mã đơn hàng tự định nghĩa (VD: ORD-1001)"]
-  user_id uuid [ref: > users.id, note: "Khách đặt hàng"]
+  user_id uuid [not null, ref: > users.id, note: "Khách đặt hàng"]
   total_price bigint [not null, note: "Tổng tiền thanh toán"]
   shipping_fee bigint [not null, default: 0, note: "Phí vận chuyển"]
   discount_amount bigint [not null, default: 0, note: "Tiền được giảm trừ (Tích hợp từ migration)"]
@@ -164,35 +188,44 @@ Table orders {
   shipping_address varchar(255) [not null, note: "Địa chỉ giao hàng tĩnh"]
   phone_number varchar(20) [not null, note: "Số điện thoại nhận hàng"]
   status varchar(50) [not null, note: "Trạng thái đơn hàng (PENDING, PAID, SHIPPING, DELIVERED, CANCELLED)"]
-  created_at timestamp [not null, default: `now()`, note: "Ngày tạo đơn"]
-  last_modified_date timestamp [not null, default: `now()`, note: "Ngày cập nhật gần nhất"]
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: "Ngày tạo đơn"]
+  last_modified_date timestamp [not null, default: `CURRENT_TIMESTAMP`, note: "Ngày cập nhật gần nhất"]
+
+  Indexes {
+    user_id [name: "idx_orders_user"]
+  }
 }
 
 Table order_items {
   id bigint [pk, increment, note: "Khóa chính"]
-  order_id varchar(50) [ref: > orders.id, note: "Mã đơn hàng"]
-  variant_sku varchar(50) [ref: > product_variants.sku, note: "Biến thể sản phẩm"]
+  order_id varchar(50) [not null, ref: > orders.id, note: "Mã đơn hàng"]
+  variant_sku varchar(50) [not null, ref: > product_variants.sku, note: "Biến thể sản phẩm"]
   quantity integer [not null, note: "Số lượng mua (Bắt buộc > 0)"]
   price bigint [not null, note: "Giá lưu giữ lúc mua hàng"]
+  
+  Indexes {
+    (id, order_id, variant_sku) [unique]
+    order_id [name: "idx_order_items_order"]
+  }
 }
 
 Table order_status_history {
   id bigint [pk, increment, note: "Khóa chính"]
-  order_id varchar(50) [ref: > orders.id, note: "Mã đơn hàng"]
+  order_id varchar(50) [not null, ref: > orders.id, note: "Mã đơn hàng"]
   status varchar(50) [not null, note: "Trạng thái thay đổi"]
   changed_by varchar(100) [not null, note: "Ai thay đổi (username hoặc SYSTEM)"]
   reason varchar(255) [note: "Lý do thay đổi"]
-  created_at timestamp [not null, default: `now()`, note: "Thời gian ghi log"]
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: "Thời gian ghi log"]
 }
 
 Table payment_transactions {
   id bigint [pk, increment, note: "Khóa chính"]
-  order_id varchar(50) [ref: > orders.id, note: "Mã đơn hàng liên kết"]
+  order_id varchar(50) [not null, ref: > orders.id, note: "Mã đơn hàng liên kết"]
   payment_method varchar(50) [not null, note: "Hình thức: COD, VNPAY, MOMO"]
   amount bigint [not null, note: "Số tiền thanh dịch vụ"]
   provider_transaction_id varchar(255) [note: "Mã giao dịch từ nhà cung cấp"]
   status varchar(50) [not null, note: "Trạng thái thanh toán (PENDING, SUCCESS, FAILED)"]
-  created_at timestamp [not null, default: `now()`, note: "Thời gian thanh toán"]
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: "Thời gian thanh toán"]
 }
 
 // =========================================================================
@@ -201,18 +234,18 @@ Table payment_transactions {
 
 Table product_reviews {
   id bigint [pk, increment, note: "Khóa chính"]
-  user_id uuid [ref: > users.id, note: "Người đánh giá"]
-  variant_sku varchar(50) [ref: > product_variants.sku, note: "Đổi từ product_id sang variant_sku để đánh giá đúng phân loại hàng thực tế"]
+  user_id uuid [not null, ref: > users.id, note: "Người đánh giá"]
+  variant_sku varchar(50) [not null, ref: > product_variants.sku, note: "Đổi từ product_id sang variant_sku để đánh giá đúng phân loại hàng thực tế"]
   order_id varchar(50) [ref: > orders.id, note: "Đơn hàng liên quan mua hàng xác thực"]
   rating integer [not null, note: "Số sao đánh giá (1-5)"]
   comment text [note: "Nội dung phản hồi"]
   parent_id bigint [ref: > product_reviews.id, note: "ID bình luận cha (phục vụ phản hồi của Admin)"]
-  created_at timestamp [not null, default: `now()`, note: "Thời gian đăng"]
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: "Thời gian đăng"]
 }
 
 Table review_images {
   id bigint [pk, increment, note: "Khóa chính"]
-  review_id bigint [ref: > product_reviews.id, note: "Bình luận sở hữu"]
+  review_id bigint [not null, ref: > product_reviews.id, note: "Bình luận sở hữu"]
   image_url varchar(255) [not null, note: "Đường dẫn hình ảnh đánh giá"]
 }
 
@@ -222,5 +255,9 @@ Table ai_chat_messages {
   session_id varchar(255) [not null, note: "Mã phiên trò chuyện của AI"]
   role varchar(50) [not null, note: "Người gửi: USER hoặc AI"]
   content text [not null, note: "Nội dung đoạn tin nhắn"]
-  created_at timestamp [not null, default: `now()`, note: "Thời điểm gửi"]
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: "Thời điểm gửi"]
+
+  Indexes {
+    session_id [name: "idx_ai_chat_session"]
+  }
 }

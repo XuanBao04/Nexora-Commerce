@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { FaEnvelope, FaLock, FaStore, FaUser, FaEye, FaEyeSlash } from "react-icons/fa";
-import { registerService } from "../services/registerService";
+import { useAuthStore } from "@/store/useAuthStore";
 
 const RegisterPage = () => {
   const [username, setUsername] = useState("");
@@ -13,6 +13,7 @@ const RegisterPage = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
+  const { register } = useAuthStore();
 
   const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -29,14 +30,14 @@ const RegisterPage = () => {
 
     setIsSubmitting(true);
     try {
-      await registerService({
+      await register({
         username: username.trim(),
         email: email.trim(),
         password: password.trim(),
       });
 
-      toast.success("Đăng ký thành công! Vui lòng đăng nhập.");
-      navigate("/login");
+      toast.success("Đăng ký thành công! Đang tự động đăng nhập...");
+      navigate("/authenticated/products", { replace: true });
     } catch (error: unknown) {
       const errorMessage =
         typeof error === "object" &&
@@ -45,7 +46,7 @@ const RegisterPage = () => {
         typeof (error as { response?: { data?: { message?: string } } }).response
           ?.data?.message === "string"
           ? (error as { response: { data: { message: string } } }).response.data.message
-          : "Đăng ký thất bại. Email có thể đã tồn tại.";
+          : "Đăng ký thất bại. Email hoặc tên đăng nhập có thể đã tồn tại.";
       toast.error(errorMessage);
       console.error("Register error:", error);
     } finally {

@@ -42,6 +42,7 @@ public class CartServiceImpl implements ICartService {
     }
 
     @Override
+    @Transactional
     public CartResponse addToCart(String userId, CartItemRequest request) {
         // Kiểm tra sản phẩm có tồn tại không
         productService.getProductById(request.productId());
@@ -56,6 +57,7 @@ public class CartServiceImpl implements ICartService {
     }
 
     @Override
+    @Transactional
     public CartResponse removeFromCart(String userId, String productId) {
         // Kiểm tra item có tồn tại trong cart Redis không
         Integer currentQty = redisCartService.getItemQuantity(userId, productId);
@@ -72,6 +74,7 @@ public class CartServiceImpl implements ICartService {
     }
 
     @Override
+    @Transactional
     public CartResponse updateQuantity(String userId, String productId, Integer quantity) {
         // Kiểm tra item có tồn tại trong cart Redis không
         Integer oldQuantity = redisCartService.getItemQuantity(userId, productId);
@@ -94,6 +97,7 @@ public class CartServiceImpl implements ICartService {
     }
 
     @Override
+    @Transactional
     public void clearCart(String userId) {
         // Giải phóng kho cho tất cả các mặt hàng trong giỏ trước khi xóa
         Map<String, Integer> cart = redisCartService.getCart(userId);

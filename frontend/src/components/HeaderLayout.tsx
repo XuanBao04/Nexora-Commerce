@@ -1,16 +1,15 @@
 import { useState, useEffect } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { FaShoppingCart, FaClipboardList, FaSignOutAlt, FaSignInAlt, FaStore } from "react-icons/fa";
-import apiClient, { setAccessToken } from '@services/api/apiClient';
-import { useCart } from '@features/cart/hooks/useCart';
+import { useCartStore } from '@/store/useCartStore';
+import { useAuthStore } from '@/store/useAuthStore';
+import { toast } from "react-toastify";
 
 export default function HeaderLayout() {
-  const [userId, setUserId] = useState<string | null>(null);
-  const [username, setUsername] = useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
-  const { cart } = useCart();
-  const isLoggedIn = Boolean(userId);
+  const { cart } = useCartStore();
+  const { user, isAuthenticated, logout } = useAuthStore();
   const [badgePop, setBadgePop] = useState(false);
   const [lastTotalItems, setLastTotalItems] = useState(cart?.totalItems || 0);
 
@@ -24,41 +23,17 @@ export default function HeaderLayout() {
     }
   }, [cart?.totalItems, lastTotalItems]);
 
-  useEffect(() => {
-    const storedUserId = localStorage.getItem("userId");
-    const storedUsername = localStorage.getItem("username");
-    if (storedUserId) {
-      setUserId(storedUserId);
-    }
-    if (storedUsername) {
-      setUsername(storedUsername);
-    }
-  }, []);
-
   const requireLogin = () => {
-    if (!isLoggedIn) {
-      const shouldGoToLogin = confirm("Vui lòng đăng nhập để sử dụng tính năng này.");
-      if (shouldGoToLogin) {
-        navigate("/login");
-      }
+    if (!isAuthenticated) {
+      toast.error("Vui lòng đăng nhập để sử dụng tính năng này.");
+      navigate("/login");
       return false;
     }
     return true;
   };
 
   const handleLogout = async () => {
-    try {
-      await apiClient.post("/auth/logout");
-    } catch {
-      // Continue with client-side logout even if server logout fails
-    }
-    localStorage.removeItem("userId");
-    localStorage.removeItem("role");
-    localStorage.removeItem("username");
-    setAccessToken(null);
-    setUserId(null);
-    setUsername(null);
-    navigate("/login");
+    await logout();
   };
 
   const isActive = (path: string) => location.pathname === path;
@@ -149,10 +124,10 @@ export default function HeaderLayout() {
 
             <div className="mx-1 hidden h-6 w-px bg-zinc-200 sm:block" />
 
-            {isLoggedIn ? (
+            {isAuthenticated ? (
               <div className="flex items-center gap-2">
                 <span className="hidden rounded-xl bg-zinc-100/80 border border-zinc-200/40 px-3.5 py-2 text-xs font-bold text-zinc-600 md:inline-block">
-                  {username || "User"}
+                  {user?.username || "User"}
                 </span>
                 <button
                   onClick={handleLogout}

@@ -3,8 +3,8 @@ import { Coupon, OrderRequest, OrderPreviewResponse } from "@/features/orders/ty
 import { CouponResponse, CouponRequest, UpdateCouponRequest } from "../types/coupon";
 import { ApiResponse } from "@/types/apiResponse";
 
-const COUPON_API = "/coupons";
-const ORDER_API = "/orders";
+const COUPON_API = "/v1/coupons";
+const ORDER_API = "/v1/orders";
 
 export const couponService = {
   /**
@@ -29,7 +29,7 @@ export const couponService = {
   async validateCoupon(code: string): Promise<boolean> {
     try {
       const response = await apiClient.get<ApiResponse<boolean>>(
-        `${COUPON_API}/${code}/validate`
+        `${COUPON_API}/${code}/validity`
       );
       return response.data.data;
     } catch {
@@ -43,7 +43,7 @@ export const couponService = {
   async calculateDiscount(code: string, orderAmount: number): Promise<number> {
     try {
       const response = await apiClient.get<ApiResponse<number>>(
-        `${COUPON_API}/${code}/discount?orderAmount=${orderAmount}`
+        `${COUPON_API}/${code}/discounts?orderAmount=${orderAmount}`
       );
       return response.data.data;
     } catch {
@@ -87,7 +87,7 @@ export const couponService = {
     request: OrderRequest
   ): Promise<OrderPreviewResponse> {
     const response = await apiClient.post<ApiResponse<OrderPreviewResponse>>(
-      `${ORDER_API}/preview`,
+      `${ORDER_API}/previews`,
       request
     );
     return response.data.data;

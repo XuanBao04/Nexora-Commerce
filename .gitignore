@@ -49,3 +49,6 @@ frontend/test-results/
 # Planning & notes (local only)
 nexora_roadmap.md
 task.md
+
+# API Docs
+docs/swagger-openapi.yaml

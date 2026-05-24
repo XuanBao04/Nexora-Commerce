@@ -47,6 +47,18 @@ public interface IProductService {
     Page<ProductResponse> searchProductsByNamePageable(String keyword, Pageable pageable);
 
     /**
+     * Get products filtered by keyword, category, and brand with pagination
+     * @param keyword search keyword
+     * @param categoryId category ID
+     * @param brandId brand ID
+     * @param minPrice minimum price filter
+     * @param maxPrice maximum price filter
+     * @param pageable pagination parameters
+     * @return Page of ProductResponse
+     */
+    Page<ProductResponse> getProductsWithFilters(String keyword, Long categoryId, Long brandId, Long minPrice, Long maxPrice, Pageable pageable);
+
+    /**
      * Get available stock for a product
      * @param productId the product ID
      * @return available quantity

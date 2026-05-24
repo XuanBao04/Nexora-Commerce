@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useCart } from "../hooks/useCart";
+import { useCartStore } from "@/store/useCartStore";
 import CartItem from "./CartItem";
 import CouponInput from "./CouponInput";
 import PriceBreakdown from "./PriceBreakdown";
@@ -24,7 +24,7 @@ type OrderPreview = {
 const Cart = () => {
   const userId = localStorage.getItem("userId") || "";
   const { cart, isLoading, error, fetchCart, removeItem, updateItem, clear } =
-    useCart();
+    useCartStore();
 
   const [couponCode, setCouponCode] = useState<string | null>(null);
   const [discountAmount, setDiscountAmount] = useState(0);
@@ -225,8 +225,8 @@ const Cart = () => {
                 <CartItem
                   key={item.id}
                   item={item}
-                  onRemove={() => removeItem(item.id)}
-                  onUpdateQuantity={(quantity) => updateItem(item.id, quantity)}
+                  onRemove={() => removeItem(item.productId)}
+                  onUpdateQuantity={(quantity) => updateItem(item.productId, quantity)}
                 />
               ))}
             </div>
