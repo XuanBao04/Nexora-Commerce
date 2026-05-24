@@ -1,0 +1,10 @@
+node_modules
+.pnpm-store
+dist
+.git
+.env
+.env.*
+Dockerfile*
+.dockerignore
+docker-compose*
+README.md
