@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
-import { productService } from "@/features/products/services/productService";
 import { inventoryService } from "../services/inventoryService";
 import { Product } from "@/features/products/types/product";
 import { InventoryItem } from "../types/inventory";
 import { formatPrice } from "@/features/cart/utils/priceCalculation";
 import { FaSync, FaEdit, FaCheck, FaTimes, FaSearch, FaBox, FaChartBar, FaCheckCircle, FaExclamationTriangle } from "react-icons/fa";
 import { toast } from "react-toastify";
+import { adminApiService } from '@/features/admin/services/adminApiService';
+import { useAdminPagination } from '@/features/admin/hooks/useAdminPagination';
+import { AdminPagination } from "@/features/admin/components/AdminPagination";
 
 interface InventoryWithProduct extends Product {
   inventory?: InventoryItem;
@@ -17,8 +19,7 @@ interface InventoryWithProduct extends Product {
 
 const InventoryManagement = () => {
   const [products, setProducts] = useState<InventoryWithProduct[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { page, size, pagination, setPage, updatePaginationData, isLoading, setIsLoading, error, setError } = useAdminPagination(10);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editQuantity, setEditQuantity] = useState<number>(0);
   const [searchTerm, setSearchTerm] = useState("");
@@ -28,33 +29,41 @@ const InventoryManagement = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const allProducts = await productService.getAllProducts();
+      const productsData = await adminApiService.getAllProducts(page, size, searchTerm);
+      const allProducts = productsData.items;
 
-      const productsWithInventory = await Promise.all(
-        allProducts.map(async (product) => {
-          try {
-            const inv = await inventoryService.getInventoryDetails(product.id);
-            return {
+      const items: InventoryWithProduct[] = [];
+      for (const product of allProducts) {
+        if (product.variants && product.variants.length > 0) {
+          for (const v of product.variants) {
+            const reserved = v.reservedQuantity ?? 0;
+            const sold = v.soldQuantity ?? 0;
+            items.push({
               ...product,
-              availableQuantity: inv.availableQuantity,
-              reservedQuantity: inv.reservedQuantity,
-              soldQuantity: inv.soldQuantity,
-              physicalQuantity: inv.quantity,
-              inventory: inv
-            };
-          } catch {
-            return {
-              ...product,
-              availableQuantity: 0,
-              reservedQuantity: 0,
-              soldQuantity: 0,
-              physicalQuantity: 0
-            };
+              id: v.sku, // Use SKU as the unique ID for table row & editing
+              price: v.price, // Use SKU variant price
+              availableQuantity: v.quantity - reserved,
+              reservedQuantity: reserved,
+              soldQuantity: sold,
+              physicalQuantity: v.quantity,
+              variantAttributes: v.attributes || [],
+            } as any);
           }
-        })
-      );
+        } else {
+          // Fallback to product.id as SKU if variants is empty
+          items.push({
+            ...product,
+            availableQuantity: product.quantity ?? 0,
+            reservedQuantity: 0,
+            soldQuantity: 0,
+            physicalQuantity: product.quantity ?? 0,
+            variantAttributes: [],
+          } as any);
+        }
+      }
 
-      setProducts(productsWithInventory);
+      setProducts(items);
+      updatePaginationData(productsData.pagination as any);
     } catch (err) {
       setError((err as Error).message || "Không thể tải dữ liệu tồn kho");
     } finally {
@@ -64,7 +73,7 @@ const InventoryManagement = () => {
 
   useEffect(() => {
     fetchInventory();
-  }, []);
+  }, [page, size]);
 
   const handleEditStart = (productId: string, currentQuantity: number) => {
     setEditingId(productId);
@@ -133,6 +142,7 @@ const InventoryManagement = () => {
             placeholder="Tìm kiếm sản phẩm theo tên hoặc mã..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && fetchInventory()}
             className="w-full pl-10 pr-4 h-11 bg-zinc-50 border border-zinc-200/60 focus:bg-white focus:border-zinc-950 focus:ring-4 focus:ring-zinc-900/5 rounded-xl text-xs font-semibold outline-none transition duration-200 text-zinc-700 placeholder:text-zinc-400"
           />
         </div>
@@ -153,7 +163,7 @@ const InventoryManagement = () => {
           className="h-11 flex items-center justify-center gap-2 px-5 bg-zinc-950 text-white rounded-xl hover:bg-zinc-800 disabled:bg-zinc-100 disabled:text-zinc-400 font-extrabold text-xs uppercase tracking-wider transition-all duration-300"
         >
           <FaSync className={`w-3 h-3 ${isLoading ? "animate-spin" : ""}`} />
-          <span>Làm mới</span>
+          <span>Tìm kiếm</span>
         </button>
       </div>
 
@@ -246,8 +256,21 @@ const InventoryManagement = () => {
                       </span>
                     </div>
                   </td>
-                  <td className="py-3 px-4 font-mono font-bold text-zinc-400 text-[10px] uppercase tracking-widest">{product.id.substring(0, 8)}...</td>
-                  <td className="py-3 px-4 font-bold text-zinc-800 max-w-xs truncate">{product.name}</td>
+                  <td className="py-3 px-4 font-mono font-bold text-zinc-950 text-xs">{product.id}</td>
+                  <td className="py-3 px-4">
+                    <div className="font-bold text-zinc-800 max-w-xs truncate" title={product.name}>
+                      {product.name}
+                    </div>
+                    {(product as any).variantAttributes && (product as any).variantAttributes.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {(product as any).variantAttributes.map((attr: any, idx: number) => (
+                          <span key={idx} className="text-[9px] font-bold uppercase tracking-wider text-zinc-500 bg-zinc-100 px-1.5 py-0.5 rounded animate-fade-in">
+                            {attr.name}: {attr.value}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </td>
                   <td className="py-3 px-4 text-right font-extrabold text-zinc-950">{formatPrice(product.price ?? 0)}</td>
                   <td className="py-3 px-4 text-center">
                     <span className="inline-block px-2.5 py-1 rounded-lg font-black bg-emerald-50 text-emerald-700 border border-emerald-100/50">
@@ -323,6 +346,9 @@ const InventoryManagement = () => {
           </table>
         </div>
       )}
+
+      {/* Pagination Controls */}
+      <AdminPagination pagination={pagination} onPageChange={setPage} />
     </div>
   );
 };

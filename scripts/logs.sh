@@ -6,7 +6,7 @@ set -euo pipefail
 # Supports tracking logs for the entire stack or individual services with aliases.
 # ==============================================================================
 
-COMPOSE_FILES="-f docker-compose.yml -f docker-compose.dev.yml"
+COMPOSE_FILES="-f docker/docker-compose.yml -f docker/docker-compose.dev.yml"
 TARGET_SERVICE=""
 
 print_help() {

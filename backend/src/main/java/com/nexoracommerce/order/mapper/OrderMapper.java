@@ -3,11 +3,9 @@ package com.nexoracommerce.order.mapper;
 import com.nexoracommerce.order.dto.response.OrderResponse;
 import com.nexoracommerce.order.dto.response.OrderItemResponse;
 import com.nexoracommerce.order.dto.response.OrderStatusHistoryResponse;
-import com.nexoracommerce.order.dto.response.PaymentTransactionResponse;
 import com.nexoracommerce.order.entity.Order;
 import com.nexoracommerce.order.entity.OrderItem;
 import com.nexoracommerce.order.entity.OrderStatusHistory;
-import com.nexoracommerce.order.entity.PaymentTransaction;
 import org.mapstruct.Mapper;
 import org.mapstruct.ReportingPolicy;
 
@@ -90,24 +88,6 @@ public interface OrderMapper {
     }
 
     /**
-     * Convert PaymentTransaction entity to PaymentTransactionResponse DTO
-     */
-    default PaymentTransactionResponse toPaymentTransactionResponse(PaymentTransaction transaction) {
-        if (transaction == null) {
-            return null;
-        }
-        return new PaymentTransactionResponse(
-                transaction.getId(),
-                transaction.getOrder() != null ? transaction.getOrder().getId() : null,
-                transaction.getPaymentMethod(),
-                transaction.getAmount(),
-                transaction.getProviderTransactionId(),
-                transaction.getStatus(),
-                transaction.getCreatedAt()
-        );
-    }
-
-    /**
      * Convert OrderItem entity to OrderItemResponse DTO (overload)
      */
     default OrderItem toEntity(OrderItemResponse response) {
@@ -141,18 +121,6 @@ public interface OrderMapper {
         }
         return histories.stream()
                 .map(this::toOrderStatusHistoryResponse)
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * Convert PaymentTransaction list to PaymentTransactionResponse list
-     */
-    default List<PaymentTransactionResponse> toPaymentTransactionResponseList(List<PaymentTransaction> transactions) {
-        if (transactions == null) {
-            return java.util.Collections.emptyList();
-        }
-        return transactions.stream()
-                .map(this::toPaymentTransactionResponse)
                 .collect(Collectors.toList());
     }
 }

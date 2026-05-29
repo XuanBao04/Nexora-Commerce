@@ -6,7 +6,7 @@ set -euo pipefail
 # Supports running individual services and restarting them.
 # ==============================================================================
 
-COMPOSE_FILES="-f docker-compose.yml -f docker-compose.dev.yml"
+COMPOSE_FILES="-f docker/docker-compose.yml -f docker/docker-compose.dev.yml"
 
 print_help() {
   echo -e "\033[1;36mNexora Commerce Dev CLI Utility\033[0m"

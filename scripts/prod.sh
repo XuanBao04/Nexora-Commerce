@@ -6,7 +6,7 @@ set -euo pipefail
 # Supports running individual services and restarting them in production mode.
 # ==============================================================================
 
-COMPOSE_FILES="-f docker-compose.yml -f docker-compose.prod.yml"
+COMPOSE_FILES="-f docker/docker-compose.yml -f docker/docker-compose.prod.yml"
 
 print_help() {
   echo -e "\033[1;35mNexora Commerce Production CLI Utility\033[0m"

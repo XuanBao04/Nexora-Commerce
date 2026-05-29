@@ -8,5 +8,6 @@ public record ProductResponse(
     Integer quantity,
     String status,
     String imageUrl,
-    String imagePublicId
+    String imagePublicId,
+    java.util.List<ProductVariantResponse> variants
 ) {}

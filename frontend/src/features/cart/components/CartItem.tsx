@@ -17,7 +17,12 @@ const CartItem = ({ item, onRemove, onUpdateQuantity }: CartItemProps) => {
   const [productImageUrl, setProductImageUrl] = useState<string | undefined>(
     undefined,
   );
-  const [availableStock, setAvailableStock] = useState<number>(0);
+  const [availableStock, setAvailableStock] = useState<number>(item.quantity);
+
+  // Sync local quantity state with prop changes from parent / store
+  useEffect(() => {
+    setQuantity(item.quantity);
+  }, [item.quantity]);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -27,7 +32,7 @@ const CartItem = ({ item, onRemove, onUpdateQuantity }: CartItemProps) => {
         setPrice(product.price ?? item.price);
         setProductImageUrl(product.imageUrl);
 
-        const stock = await productService.getAvailableStock(item.productId);
+        const stock = await productService.getProductStock(item.productId);
         setAvailableStock(stock);
       } catch (error) {
         console.error("Error fetching product:", error);

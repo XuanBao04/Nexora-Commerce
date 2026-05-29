@@ -13,9 +13,10 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
-
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
 
 @Getter
 @Setter
@@ -52,16 +53,18 @@ public class Product {
     private Brand brand;
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
+    @MapKey(name = "sku")
     @BatchSize(size = 20)
     @Builder.Default
-    private List<ProductVariant> variants = new ArrayList<>();
+    private Map<String, ProductVariant> variants = new LinkedHashMap<>();
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @BatchSize(size = 20)
     @Builder.Default
-    private List<ProductImage> images = new ArrayList<>();
+    private Set<ProductImage> images = new HashSet<>();
 
-    @Transient
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
     private com.nexoracommerce.common.enums.ProductStatus status;
 
     @Transient
@@ -71,46 +74,51 @@ public class Product {
         if (variants == null || variants.isEmpty()) {
             return null;
         }
-        return variants.stream()
-                .filter(v -> v.getSku().equals(this.id))
+        ProductVariant variant = variants.get(this.id);
+        if (variant != null) {
+            return variant.getPrice();
+        }
+        // Fallback: get first variant if SKU-matched variant not found
+        return variants.values().stream()
                 .findFirst()
                 .map(ProductVariant::getPrice)
-                .orElse(variants.get(0).getPrice());
+                .orElse(null);
     }
 
     public void setPrice(Long price) {
         if (price == null) return;
         if (variants == null) {
-            variants = new ArrayList<>();
+            variants = new LinkedHashMap<>();
         }
-        variants.stream()
-                .filter(v -> v.getSku().equals(this.id))
-                .findFirst()
-                .ifPresentOrElse(
-                    v -> v.setPrice(price),
-                    () -> {
-                        ProductVariant v = ProductVariant.builder()
-                                .sku(this.id)
-                                .product(this)
-                                .price(price)
-                                .quantity(0)
-                                .reservedQuantity(0)
-                                .soldQuantity(0)
-                                .build();
-                        variants.add(v);
-                    }
-                );
+        ProductVariant variant = variants.get(this.id);
+        if (variant != null) {
+            variant.setPrice(price);
+        } else {
+            ProductVariant newVariant = ProductVariant.builder()
+                    .sku(this.id)
+                    .product(this)
+                    .price(price)
+                    .quantity(0)
+                    .reservedQuantity(0)
+                    .soldQuantity(0)
+                    .build();
+            variants.put(this.id, newVariant);
+        }
     }
 
     public Integer getQuantity() {
         if (variants == null || variants.isEmpty()) {
             return null;
         }
-        return variants.stream()
-                .filter(v -> v.getSku().equals(this.id))
+        ProductVariant variant = variants.get(this.id);
+        if (variant != null) {
+            return variant.getQuantity();
+        }
+        // Fallback: get first variant if SKU-matched variant not found
+        return variants.values().stream()
                 .findFirst()
                 .map(ProductVariant::getQuantity)
-                .orElse(variants.get(0).getQuantity());
+                .orElse(null);
     }
 
     public String getImageUrl() {
@@ -121,13 +129,16 @@ public class Product {
                 .filter(ProductImage::getIsPrimary)
                 .findFirst()
                 .map(ProductImage::getImageUrl)
-                .orElse(images.get(0).getImageUrl());
+                .orElseGet(() -> images.stream()
+                        .findAny()
+                        .map(ProductImage::getImageUrl)
+                        .orElse(null));
     }
 
     public void setImageUrl(String imageUrl) {
         if (imageUrl == null) return;
         if (images == null) {
-            images = new ArrayList<>();
+            images = new HashSet<>();
         }
         images.stream()
                 .filter(ProductImage::getIsPrimary)

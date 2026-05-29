@@ -113,7 +113,7 @@ public class RedisConfig {
         mapper.registerModule(new JavaTimeModule());
         mapper.activateDefaultTyping(
                 mapper.getPolymorphicTypeValidator(),
-                ObjectMapper.DefaultTyping.NON_FINAL,
+                ObjectMapper.DefaultTyping.EVERYTHING,
                 com.fasterxml.jackson.annotation.JsonTypeInfo.As.PROPERTY
         );
 

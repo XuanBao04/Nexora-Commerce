@@ -14,6 +14,8 @@ import java.util.Set;
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface UserMapper {
 
+    @org.mapstruct.Mapping(target = "active", constant = "true")
+    @org.mapstruct.Mapping(target = "role", expression = "java(user.getRoles() != null && !user.getRoles().isEmpty() ? user.getRoles().iterator().next().getName() : \"ROLE_CUSTOMER\")")
     UserProfileResponse toProfileResponse(User user);
 
     UserAddressResponse toAddressResponse(UserAddress address);

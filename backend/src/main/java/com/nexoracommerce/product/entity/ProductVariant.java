@@ -62,6 +62,26 @@ public class ProductVariant {
     @Builder.Default
     private Integer soldQuantity = 0; // Actually sold count
 
+    @Column(name = "original_price")
+    @Min(value = 0, message = "Original price must be non-negative")
+    private Long originalPrice; // Original price for discount display
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Integer weight = 0; // Trọng lượng (gram)
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Integer length = 0; // Kích thước (cm)
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Integer width = 0;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Integer height = 0;
+
     @Column(name = "embedding", columnDefinition = "vector(768)")
     private float[] embedding; // Semantic Search vector (Gemini text-embedding-004)
 

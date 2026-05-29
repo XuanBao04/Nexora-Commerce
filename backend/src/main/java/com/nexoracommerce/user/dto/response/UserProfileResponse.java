@@ -12,5 +12,7 @@ public record UserProfileResponse(
     String fullName,
     String email,
     LocalDateTime createdAt,
-    Set<String> roles
+    Set<String> roles,
+    boolean active,
+    String role
 ) {}

@@ -17,53 +17,17 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
   const [quantity, setQuantity] = useState(1);
   const [isAdding, setIsAdding] = useState(false);
 
-  // Parse dynamic attribute groups from variants
-  const attributeGroups = useMemo(() => {
-    const groups: Record<string, string[]> = {};
-    
-    if (product.variants) {
-      product.variants.forEach((v) => {
-        if (v.attributes && Array.isArray(v.attributes)) {
-          v.attributes.forEach((attr) => {
-            if (!groups[attr.name]) {
-              groups[attr.name] = [];
-            }
-            if (!groups[attr.name].includes(attr.value)) {
-              groups[attr.name].push(attr.value);
-            }
-          });
-        }
-      });
-    }
-    return groups;
-  }, [product.variants]);
-
-  const hasAttributes = Object.keys(attributeGroups).length > 0;
-
-  // Selected attributes state (e.g. { "Màu sắc": "Đen", "Dung lượng": "128GB" })
-  const [selectedAttributes, setSelectedAttributes] = useState<Record<string, string>>({});
-
-  // Auto-select first variant's attributes to make UX seamless
-  useEffect(() => {
-    if (hasAttributes && product.variants && product.variants.length > 0) {
-      const firstVariant = product.variants[0];
-      if (firstVariant.attributes) {
-        const initialAttrs: Record<string, string> = {};
-        firstVariant.attributes.forEach(attr => {
-          initialAttrs[attr.name] = attr.value;
-        });
-        setSelectedAttributes(initialAttrs);
-      }
-    } else if (!hasAttributes && product.variants && product.variants.length > 0) {
-      // Fallback for variants without structured attributes (select first SKU)
-      setSelectedSku(product.variants[0].sku);
-    }
-  }, [product.variants, hasAttributes]);
-
-  // Fallback SKU selection if there are no structured attributes
+  // SKU selection state
   const [selectedSku, setSelectedSku] = useState<string | null>(null);
 
-  // Find currently selected variant based on selected attributes or fallback SKU
+  // Auto-select first variant SKU on mount or variant list changes
+  useEffect(() => {
+    if (product.variants && product.variants.length > 0) {
+      setSelectedSku(product.variants[0].sku);
+    }
+  }, [product.variants]);
+
+  // Find currently selected variant based on selected SKU
   const currentVariant = useMemo<ProductVariant | null>(() => {
     if (!product.variants || product.variants.length === 0) {
       return {
@@ -72,24 +36,8 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
         quantity: product.quantity || 0,
       };
     }
-
-    if (hasAttributes) {
-      // Check if all attribute groups have a selection
-      const allSelected = Object.keys(attributeGroups).every(group => selectedAttributes[group]);
-      if (!allSelected) return null;
-
-      // Find variant matching selected attributes
-      return product.variants.find(v => {
-        if (!v.attributes) return false;
-        return Object.entries(selectedAttributes).every(([name, value]) => 
-          v.attributes?.some(attr => attr.name === name && attr.value === value)
-        );
-      }) || null;
-    } else {
-      // Fallback SKU selection
-      return product.variants.find(v => v.sku === selectedSku) || product.variants[0] || null;
-    }
-  }, [product.variants, product.id, product.price, product.quantity, selectedAttributes, selectedSku, attributeGroups, hasAttributes]);
+    return product.variants.find(v => v.sku === selectedSku) || product.variants[0] || null;
+  }, [product.variants, product.id, product.price, product.quantity, selectedSku]);
 
   // Gallery primary image state
   const [activeImageUrl, setActiveImageUrl] = useState<string>('');
@@ -131,14 +79,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
   // Stock status calculation
   const stockLimit = currentVariant ? currentVariant.quantity : 0;
   const isOutOfStock = stockLimit <= 0;
-  const isFullySelected = !hasAttributes || Object.keys(attributeGroups).every(group => selectedAttributes[group]);
-
-  const handleAttributeClick = (group: string, value: string) => {
-    setSelectedAttributes(prev => ({
-      ...prev,
-      [group]: value
-    }));
-  };
+  const isFullySelected = true; // Always true because first variant is automatically selected by SKU
 
   const handleAddToCart = async () => {
     const userId = localStorage.getItem("userId");
@@ -257,61 +198,57 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
               {product.description || "Sản phẩm này chưa có mô tả chi tiết từ quản trị viên."}
             </div>
 
-            {/* Dynamic Attribute Selector Chips */}
-            {hasAttributes ? (
-              <div className="space-y-4">
-                {Object.entries(attributeGroups).map(([groupName, values]) => (
-                  <div key={groupName} className="space-y-2">
-                    <span className="block text-[10px] font-black text-zinc-400 uppercase tracking-widest">
-                      {groupName}
-                    </span>
-                    <div className="flex flex-wrap gap-2">
-                      {values.map((val) => {
-                        const isSelected = selectedAttributes[groupName] === val;
-                        return (
-                          <button
-                            key={val}
-                            onClick={() => handleAttributeClick(groupName, val)}
-                            className={`h-9 px-4 rounded-xl text-xs font-bold transition-all duration-200 active:scale-95 ${
-                              isSelected
-                                ? 'bg-zinc-950 text-white shadow-sm border border-zinc-950'
-                                : 'bg-zinc-50 hover:bg-zinc-100 text-zinc-700 border border-zinc-200/50'
-                            }`}
-                          >
-                            {val}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : product.variants && product.variants.length > 0 ? (
-              /* Fallback Selector for raw list of SKUs */
+            {/* Version Selection & Attribute Details */}
+            {product.variants && product.variants.length > 1 && (
               <div className="space-y-2">
                 <span className="block text-[10px] font-black text-zinc-400 uppercase tracking-widest">
-                  Chọn mã phân loại (SKU)
+                  Chọn phiên bản
                 </span>
                 <div className="flex flex-wrap gap-2">
                   {product.variants.map((v) => {
                     const isSelected = selectedSku === v.sku;
+                    const label = v.attributes && v.attributes.length > 0
+                      ? v.attributes.map(a => a.value).join(' - ')
+                      : v.sku;
                     return (
                       <button
                         key={v.sku}
                         onClick={() => setSelectedSku(v.sku)}
-                        className={`h-9 px-4 rounded-xl text-xs font-bold transition-all duration-200 active:scale-95 ${
+                        className={`h-11 px-4 rounded-xl text-xs font-bold transition-all duration-200 active:scale-95 flex flex-col justify-center items-start border ${
                           isSelected
-                            ? 'bg-zinc-950 text-white shadow-sm border border-zinc-950'
+                            ? 'bg-zinc-950 text-white shadow-sm border-zinc-950'
                             : 'bg-zinc-50 hover:bg-zinc-100 text-zinc-700 border border-zinc-200/50'
                         }`}
                       >
-                        {v.sku}
+                        <span>{label}</span>
+                        {v.attributes && v.attributes.length > 0 && (
+                          <span className={`text-[8px] font-semibold mt-0.5 ${isSelected ? 'text-zinc-300' : 'text-zinc-400'}`}>
+                            SKU: {v.sku}
+                          </span>
+                        )}
                       </button>
                     );
                   })}
                 </div>
               </div>
-            ) : null}
+            )}
+
+            {/* Dynamic Passive Attributes List */}
+            {currentVariant && currentVariant.attributes && currentVariant.attributes.length > 0 && (
+              <div className="space-y-2 border-t border-zinc-100 pt-3">
+                <span className="block text-[10px] font-black text-zinc-400 uppercase tracking-widest">
+                  Thông số chi tiết
+                </span>
+                <div className="grid grid-cols-2 gap-2">
+                  {currentVariant.attributes.map((attr, idx) => (
+                    <div key={idx} className="bg-zinc-50 border border-zinc-200/40 rounded-xl p-2.5 flex flex-col">
+                      <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider">{attr.name}</span>
+                      <span className="text-xs font-black text-zinc-800 mt-0.5">{attr.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Price Tag & Stock Status */}
             <div className="bg-zinc-50 border border-zinc-100/80 rounded-2xl p-4 flex items-center justify-between">

@@ -7,6 +7,10 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;
 
+import com.nexoracommerce.product.dto.response.ProductVariantResponse;
+import com.nexoracommerce.product.dto.response.ProductVariantAttributeResponse;
+import com.nexoracommerce.product.entity.ProductVariant;
+import java.util.Map;
 import java.util.List;
 import java.util.Set;
 
@@ -21,4 +25,25 @@ public interface ProductMapper {
     List<ProductResponse> toResponseList(List<Product> products);
 
     Set<ProductResponse> toResponseSet(Set<Product> products);
+
+    default List<ProductVariantResponse> mapVariants(Map<String, ProductVariant> variants) {
+        if (variants == null) {
+            return List.of();
+        }
+        return variants.values().stream()
+                .map(v -> new ProductVariantResponse(
+                        v.getSku(),
+                        v.getPrice(),
+                        v.getQuantity(),
+                        v.getReservedQuantity(),
+                        v.getSoldQuantity(),
+                        v.getAttributeValues() == null ? List.of() : v.getAttributeValues().stream()
+                                .map(attrVal -> new ProductVariantAttributeResponse(
+                                        attrVal.getAttribute().getName(),
+                                        attrVal.getValue()
+                                ))
+                                .toList()
+                ))
+                .toList();
+    }
 }

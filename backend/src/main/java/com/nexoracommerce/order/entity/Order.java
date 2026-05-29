@@ -23,7 +23,9 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Getter
 @Setter
@@ -108,15 +110,15 @@ public class Order {
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @BatchSize(size = 20)
     @Builder.Default
-    private List<OrderItem> orderItems = new ArrayList<>();
+    private Set<OrderItem> orderItems = new HashSet<>();
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @BatchSize(size = 20)
     @Builder.Default
-    private List<OrderStatusHistory> statusHistory = new ArrayList<>();
+    private Set<OrderStatusHistory> statusHistory = new HashSet<>();
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @BatchSize(size = 20)
     @Builder.Default
-    private List<PaymentTransaction> paymentTransactions = new ArrayList<>();
+    private Set<PaymentTransaction> paymentTransactions = new HashSet<>();
 }

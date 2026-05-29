@@ -288,6 +288,11 @@ const ProductManagement = () => {
       uploadFormData.append("description", formData.description.trim());
       uploadFormData.append("status", formData.status);
 
+      // Append root price to satisfy backend ProductFormRequest validation
+      if (variantsForm.length > 0 && variantsForm[0].price) {
+        uploadFormData.append("price", variantsForm[0].price.trim());
+      }
+
       if (formData.categoryId) {
         uploadFormData.append("categoryId", formData.categoryId);
       }
@@ -788,13 +793,15 @@ const ProductManagement = () => {
             </thead>
             <tbody className="divide-y divide-zinc-100">
               {filteredProducts.map((product) => {
-                // Calculate display price range
-                const prices = product.variants ? product.variants.map(v => v.price) : [];
-                const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
-                const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
-                const priceText = minPrice === maxPrice 
-                  ? formatPrice(minPrice) 
-                  : `${formatPrice(minPrice)} - ${formatPrice(maxPrice)}`;
+                 // Calculate display price range
+                 const prices = product.variants && product.variants.length > 0
+                   ? product.variants.map(v => v.price)
+                   : (product.price ? [product.price] : []);
+                 const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
+                 const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
+                 const priceText = minPrice === maxPrice 
+                   ? formatPrice(minPrice) 
+                   : `${formatPrice(minPrice)} - ${formatPrice(maxPrice)}`;
 
                 // Retrieve thumbnail image
                 const primaryImg = product.images?.find(img => img.isPrimary) || product.images?.[0];
@@ -841,8 +848,25 @@ const ProductManagement = () => {
                         )}
                       </div>
                     </td>
-                    <td className="py-3 px-4 font-bold text-zinc-500 pl-8">
-                      {product.variants ? product.variants.length : 0} SKUs
+                    <td className="py-3 px-4 text-zinc-500">
+                      <div className="font-bold text-zinc-700 pl-4 mb-1">
+                        {product.variants && product.variants.length > 0 ? product.variants.length : 1} SKUs
+                      </div>
+                      <div className="flex flex-col gap-1 text-[10px] text-zinc-400 font-mono pl-4">
+                        {product.variants && product.variants.length > 0 ? (
+                          product.variants.map((v) => (
+                            <div key={v.sku} className="flex justify-between items-center gap-2 max-w-[170px] bg-zinc-50 border border-zinc-200/40 px-2 py-0.5 rounded-md">
+                              <span className="truncate text-zinc-500 font-medium" title={v.sku}>{v.sku}</span>
+                              <span className="font-extrabold text-zinc-700 bg-zinc-200/60 px-1.5 py-0.5 rounded text-[9px]" title="Tồn kho">{v.quantity}</span>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="flex justify-between items-center gap-2 max-w-[170px] bg-zinc-50 border border-zinc-200/40 px-2 py-0.5 rounded-md">
+                            <span className="truncate text-zinc-500 font-medium">{product.id}</span>
+                            <span className="font-extrabold text-zinc-700 bg-zinc-200/60 px-1.5 py-0.5 rounded text-[9px]">{product.quantity ?? 0}</span>
+                          </div>
+                        )}
+                      </div>
                     </td>
                     <td className="py-3 px-4 text-right font-extrabold text-zinc-950 text-sm">
                       {priceText}

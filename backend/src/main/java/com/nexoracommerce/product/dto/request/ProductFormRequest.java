@@ -27,5 +27,7 @@ public record ProductFormRequest(
     @ValidEnum(enumClass = ProductStatus.class, message = "Invalid product status. Must be one of: ACTIVE, INACTIVE")
     String status,
 
-    MultipartFile image
+    MultipartFile image,
+
+    String variants
 ) {}

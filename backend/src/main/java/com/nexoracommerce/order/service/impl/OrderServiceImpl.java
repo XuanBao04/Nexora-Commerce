@@ -33,6 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -99,9 +100,9 @@ public class OrderServiceImpl implements IOrderService {
                 .status(OrderStatus.PENDING)
                 .createdAt(now)
                 .lastModifiedDate(now)
-                .orderItems(new ArrayList<>())
-                .statusHistory(new ArrayList<>())
-                .paymentTransactions(new ArrayList<>())
+                .orderItems(new HashSet<>())
+                .statusHistory(new HashSet<>())
+                .paymentTransactions(new HashSet<>())
                 .build();
 
         // 6. Add order items with DB prices and reserve inventory

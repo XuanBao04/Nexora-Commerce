@@ -6,7 +6,7 @@ set -euo pipefail
 # Supports tearing down the entire stack or individual service containers.
 # ==============================================================================
 
-COMPOSE_FILES="-f docker-compose.yml -f docker-compose.dev.yml -f docker-compose.prod.yml"
+COMPOSE_FILES="-f docker/docker-compose.yml -f docker/docker-compose.dev.yml -f docker/docker-compose.prod.yml"
 
 print_help() {
   echo -e "\033[1;36mNexora Commerce Down CLI Utility\033[0m"
