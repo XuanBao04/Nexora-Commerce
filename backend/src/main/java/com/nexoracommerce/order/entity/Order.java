@@ -2,6 +2,7 @@ package com.nexoracommerce.order.entity;
 
 import com.nexoracommerce.common.enums.OrderStatus;
 import com.nexoracommerce.coupon.entity.Coupon;
+import com.nexoracommerce.order.enums.PaymentStatus;
 import com.nexoracommerce.user.entity.User;
 import jakarta.persistence.*;
 import org.hibernate.annotations.BatchSize;
@@ -30,11 +31,12 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 @EqualsAndHashCode(of = "id")
-@ToString(exclude = {"user", "coupon", "orderItems", "statusHistory"})
+@ToString(exclude = {"user", "coupon", "orderItems", "statusHistory", "paymentTransactions"})
 @Entity
 @Table(name = "orders", indexes = {
     @Index(name = "idx_orders_user", columnList = "user_id"),
-    @Index(name = "idx_orders_coupon", columnList = "coupon_code")
+    @Index(name = "idx_orders_status", columnList = "status"),
+    @Index(name = "idx_orders_payment_status", columnList = "payment_status")
 })
 @EntityListeners(AuditingEntityListener.class)
 public class Order {
@@ -83,7 +85,17 @@ public class Order {
     @NotNull(message = "Order status is required")
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
-    private OrderStatus status; 
+    private OrderStatus status;
+
+    @NotNull(message = "Payment status is required")
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_status", nullable = false, length = 50)
+    @Builder.Default
+    private PaymentStatus paymentStatus = PaymentStatus.UNPAID;
+
+    @Size(max = 500, message = "Customer note must not exceed 500 characters")
+    @Column(name = "customer_note", columnDefinition = "TEXT")
+    private String customerNote;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     @CreatedDate
@@ -102,4 +114,9 @@ public class Order {
     @BatchSize(size = 20)
     @Builder.Default
     private List<OrderStatusHistory> statusHistory = new ArrayList<>();
+
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
+    @BatchSize(size = 20)
+    @Builder.Default
+    private List<PaymentTransaction> paymentTransactions = new ArrayList<>();
 }

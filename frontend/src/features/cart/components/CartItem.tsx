@@ -24,7 +24,7 @@ const CartItem = ({ item, onRemove, onUpdateQuantity }: CartItemProps) => {
       try {
         const product = await productService.getProductById(item.productId);
         setProductName(product.name);
-        setPrice(product.price);
+        setPrice(product.price ?? item.price);
         setProductImageUrl(product.imageUrl);
 
         const stock = await productService.getAvailableStock(item.productId);

@@ -2,7 +2,7 @@ package com.nexoracommerce.config.filter;
 
 import com.nexoracommerce.auth.service.impl.CustomUserDetailsService;
 import com.nexoracommerce.config.security.JwtService;
-import io.jsonwebtoken.ExpiredJwtException;
+
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -105,7 +105,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) {
+    protected boolean shouldNotFilter(@NonNull HttpServletRequest request) {
         String path = request.getRequestURI();
         return path.startsWith("/api/v1/authentications/sessions")
                 || path.startsWith("/api/v1/authentications/registrations")

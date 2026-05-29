@@ -62,6 +62,13 @@ function RequireAuth({ children }: { children: ReactElement }) {
   return children;
 }
 
+function HomeRedirect() {
+  const { isAuthenticated, isLoading } = useAuthStore();
+
+  if (isLoading) return <PageLoadingFallback />;
+  return <Navigate to={isAuthenticated ? "/authenticated/products" : "/login"} replace />;
+}
+
 function RequireAdmin({ children }: { children: ReactElement }) {
   const navigate = useNavigate();
   const { user, isAuthenticated, isLoading } = useAuthStore();
@@ -99,7 +106,7 @@ function App() {
     <BrowserRouter>
           <Suspense fallback={<PageLoadingFallback />}>
             <Routes>
-              <Route path="/" element={<Navigate to="/authenticated/products" />} />
+              <Route path="/" element={<HomeRedirect />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route

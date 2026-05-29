@@ -5,7 +5,7 @@ import com.nexoracommerce.cart.dto.response.CartItemResponse;
 import com.nexoracommerce.cart.entity.CartItem;
 import com.nexoracommerce.constant.MessageConstant;
 import com.nexoracommerce.common.exception.ResourceNotFoundException;
-import com.nexoracommerce.product.entity.Product;
+import com.nexoracommerce.product.entity.ProductVariant;
 import org.mapstruct.Mapper;
 import org.mapstruct.ReportingPolicy;
 
@@ -16,13 +16,13 @@ import java.util.stream.Collectors;
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface CartMapper {
 
-    default CartResponse toCartResponse(String userId, List<CartItem> items, Map<String, Product> productsById) {
+    default CartResponse toCartResponse(String userId, List<CartItem> items, Map<String, ProductVariant> variantsBySku) {
         if (items == null) {
             items = java.util.Collections.emptyList();
         }
 
         List<CartItemResponse> itemResponses = items.stream()
-                .map(item -> toCartItemResponse(item, productsById))
+                .map(item -> toCartItemResponse(item, variantsBySku))
                 .collect(Collectors.toList());
 
         Long totalPrice = itemResponses.stream()
@@ -37,13 +37,13 @@ public interface CartMapper {
         );
     }
 
-    default CartItemResponse toCartItemResponse(CartItem item, Map<String, Product> productsById) {
-        Product product = productsById.get(item.getProductId());
-        if (product == null) {
+    default CartItemResponse toCartItemResponse(CartItem item, Map<String, ProductVariant> variantsBySku) {
+        ProductVariant variant = variantsBySku.get(item.getProductId());
+        if (variant == null) {
             throw new ResourceNotFoundException(MessageConstant.Product.NOT_FOUND + item.getProductId());
         }
 
-        Long price = product.getPrice();
+        Long price = variant.getPrice();
         Long totalPrice = price * item.getQuantity();
 
         return new CartItemResponse(
@@ -56,7 +56,7 @@ public interface CartMapper {
         );
     }
 
-    default CartResponse toCartResponseFromRedis(String userId, Map<String, Integer> redisCart, Map<String, Product> productsById) {
+    default CartResponse toCartResponseFromRedis(String userId, Map<String, Integer> redisCart, Map<String, ProductVariant> variantsBySku) {
         if (redisCart == null || redisCart.isEmpty()) {
             return new CartResponse(
                     userId,
@@ -70,12 +70,12 @@ public interface CartMapper {
                 .map(entry -> {
                     String productId = entry.getKey();
                     Integer quantity = entry.getValue();
-                    Product product = productsById.get(productId);
-                    if (product == null) {
+                    ProductVariant variant = variantsBySku.get(productId);
+                    if (variant == null) {
                         throw new ResourceNotFoundException(MessageConstant.Product.NOT_FOUND + productId);
                     }
 
-                    Long price = product.getPrice();
+                    Long price = variant.getPrice();
                     Long totalPrice = price * quantity;
 
                     return new CartItemResponse(

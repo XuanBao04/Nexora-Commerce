@@ -3,6 +3,7 @@ package com.nexoracommerce.config.filter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -23,9 +24,9 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
     private static final String REQUEST_ID_ATTRIBUTE = "requestId";
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(@NonNull HttpServletRequest request,
+                                    @NonNull HttpServletResponse response,
+                                    @NonNull FilterChain filterChain) throws ServletException, IOException {
         
         // Generate unique request ID for tracing
         String requestId = UUID.randomUUID().toString();
@@ -97,7 +98,7 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) {
+    protected boolean shouldNotFilter(@NonNull HttpServletRequest request) {
         String path = request.getRequestURI();
         // Skip logging for health check endpoints if any
         return path.startsWith("/actuator/health");

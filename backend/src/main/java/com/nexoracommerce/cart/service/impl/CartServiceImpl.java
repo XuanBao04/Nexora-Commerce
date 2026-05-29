@@ -4,14 +4,12 @@ import com.nexoracommerce.constant.MessageConstant;
 
 import com.nexoracommerce.cart.dto.request.CartItemRequest;
 import com.nexoracommerce.cart.dto.response.CartResponse;
-import com.nexoracommerce.common.exception.BusinessLogicException;
 import com.nexoracommerce.common.exception.ResourceNotFoundException;
 import com.nexoracommerce.cart.mapper.CartMapper;
 import com.nexoracommerce.cart.service.ICartService;
 import com.nexoracommerce.inventory.service.IInventoryService;
-import com.nexoracommerce.product.entity.Product;
-import com.nexoracommerce.product.repository.ProductRepository;
-import com.nexoracommerce.product.service.IProductService;
+import com.nexoracommerce.product.entity.ProductVariant;
+import com.nexoracommerce.product.repository.ProductVariantRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,9 +30,8 @@ public class CartServiceImpl implements ICartService {
 
     private final RedisCartService redisCartService;
     private final CartMapper cartMapper;
-    private final IProductService productService;
     private final IInventoryService inventoryService;
-    private final ProductRepository productRepository;
+    private final ProductVariantRepository productVariantRepository;
 
     @Override
     public CartResponse getCart(String userId) {
@@ -44,14 +41,16 @@ public class CartServiceImpl implements ICartService {
     @Override
     @Transactional
     public CartResponse addToCart(String userId, CartItemRequest request) {
-        // Kiểm tra sản phẩm có tồn tại không
-        productService.getProductById(request.productId());
+        // Kiểm tra variant có tồn tại không (cart dùng SKU)
+        ProductVariant variant = productVariantRepository.findBySku(request.productId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        MessageConstant.Product.NOT_FOUND + request.productId()));
 
         // Reserve stock trước khi cập nhật giỏ hàng (sẽ ném exception nếu không đủ hàng)
-        inventoryService.reserveStock(request.productId(), request.quantity());
+        inventoryService.reserveStock(variant.getSku(), request.quantity());
 
         // Thêm vào Redis (HINCRBY — tự tăng nếu đã tồn tại)
-        redisCartService.addItem(userId, request.productId(), request.quantity());
+        redisCartService.addItem(userId, variant.getSku(), request.quantity());
 
         return buildCartResponse(userId);
     }
@@ -119,11 +118,11 @@ public class CartServiceImpl implements ICartService {
             return cartMapper.toCartResponseFromRedis(userId, cart, Map.of());
         }
 
-        List<String> productIds = new ArrayList<>(cart.keySet());
+        List<String> skus = new ArrayList<>(cart.keySet());
 
-        Map<String, Product> productsById = productRepository.findAllById(productIds).stream()
-                .collect(Collectors.toMap(Product::getId, product -> product));
+        Map<String, ProductVariant> variantsBySku = productVariantRepository.findAllById(skus).stream()
+                .collect(Collectors.toMap(ProductVariant::getSku, variant -> variant));
 
-        return cartMapper.toCartResponseFromRedis(userId, cart, productsById);
+        return cartMapper.toCartResponseFromRedis(userId, cart, variantsBySku);
     }
 }

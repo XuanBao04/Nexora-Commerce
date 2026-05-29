@@ -3,6 +3,8 @@ package com.nexoracommerce.brand.service;
 import com.nexoracommerce.brand.dto.request.BrandRequest;
 import com.nexoracommerce.brand.dto.response.BrandResponse;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import java.util.List;
 
 public interface IBrandService {
@@ -13,4 +15,5 @@ public interface IBrandService {
     BrandResponse createBrand(BrandRequest request);
     BrandResponse updateBrand(Long id, BrandRequest request);
     void deleteBrand(Long id);
+    Page<BrandResponse> getBrandsPageable(Pageable pageable);
 }

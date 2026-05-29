@@ -6,6 +6,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.Objects;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -14,7 +16,7 @@ import java.util.concurrent.TimeUnit;
  * Encapsulates all Redis Hash operations for the shopping cart.
  * <p>
  * Redis key format: {@code cart:user:{userId}}
- * Hash fields: productId → quantity (stored as Integer)
+ * Hash fields: variantSku → quantity (stored as Integer)
  */
 @Slf4j
 @Service
@@ -32,37 +34,40 @@ public class RedisCartService {
      * Add quantity to an item in the cart (increments if already exists).
      */
     public void addItem(String userId, String productId, int quantity) {
-        String key = buildKey(userId);
-        redisTemplate.opsForHash().increment(key, productId, quantity);
+        final String key = Objects.requireNonNull(buildKey(userId));
+        final String field = Objects.requireNonNull(productId);
+        redisTemplate.opsForHash().increment(key, field, quantity);
         refreshTtl(userId);
-        log.debug("[Cart] Added item: userId={}, productId={}, qty={}", userId, productId, quantity);
+        log.debug("[Cart] Added item: userId={}, sku={}, qty={}", userId, productId, quantity);
     }
 
     /**
      * Remove an item entirely from the cart.
      */
     public void removeItem(String userId, String productId) {
-        String key = buildKey(userId);
-        redisTemplate.opsForHash().delete(key, productId);
+        final String key = Objects.requireNonNull(buildKey(userId));
+        final String field = Objects.requireNonNull(productId);
+        redisTemplate.opsForHash().delete(key, field);
         refreshTtl(userId);
-        log.debug("[Cart] Removed item: userId={}, productId={}", userId, productId);
+        log.debug("[Cart] Removed item: userId={}, sku={}", userId, productId);
     }
 
     /**
      * Set the exact quantity for an item (overwrites previous value).
      */
     public void setItemQuantity(String userId, String productId, int quantity) {
-        String key = buildKey(userId);
-        redisTemplate.opsForHash().put(key, productId, quantity);
+        final String key = Objects.requireNonNull(buildKey(userId));
+        final String field = Objects.requireNonNull(productId);
+        redisTemplate.opsForHash().put(key, field, quantity);
         refreshTtl(userId);
-        log.debug("[Cart] Set quantity: userId={}, productId={}, qty={}", userId, productId, quantity);
+        log.debug("[Cart] Set quantity: userId={}, sku={}, qty={}", userId, productId, quantity);
     }
 
     /**
-     * Get all items in the cart as a Map of productId → quantity.
+    * Get all items in the cart as a Map of variantSku → quantity.
      */
     public Map<String, Integer> getCart(String userId) {
-        String key = buildKey(userId);
+        final String key = Objects.requireNonNull(buildKey(userId));
         Map<Object, Object> entries = redisTemplate.opsForHash().entries(key);
 
         Map<String, Integer> cart = new HashMap<>();
@@ -79,8 +84,9 @@ public class RedisCartService {
      * Returns null if the item does not exist.
      */
     public Integer getItemQuantity(String userId, String productId) {
-        String key = buildKey(userId);
-        Object value = redisTemplate.opsForHash().get(key, productId);
+        final String key = Objects.requireNonNull(buildKey(userId));
+        final String field = Objects.requireNonNull(productId);
+        Object value = redisTemplate.opsForHash().get(key, field);
         if (value == null) {
             return null;
         }
@@ -91,7 +97,7 @@ public class RedisCartService {
      * Clear the entire cart for a user.
      */
     public void clearCart(String userId) {
-        String key = buildKey(userId);
+        final String key = Objects.requireNonNull(buildKey(userId));
         redisTemplate.delete(key);
         log.debug("[Cart] Cleared cart: userId={}", userId);
     }
@@ -100,7 +106,7 @@ public class RedisCartService {
      * Refresh the TTL on the cart key (called on every write operation).
      */
     public void refreshTtl(String userId) {
-        String key = buildKey(userId);
+        final String key = Objects.requireNonNull(buildKey(userId));
         redisTemplate.expire(key, ttlDays, TimeUnit.DAYS);
     }
 

@@ -11,7 +11,6 @@ import com.nexoracommerce.order.repository.OrderRepository;
 import com.nexoracommerce.order.service.IOrderService;
 import com.nexoracommerce.payment.service.PaymentRollbackService;
 import com.nexoracommerce.redis.service.RedisStockService;
-import com.nexoracommerce.redis.service.StockSyncService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -34,7 +33,6 @@ public class CheckoutService implements ICheckoutService {
 
     private final IOrderService orderService;
     private final RedisStockService redisStockService;
-    private final StockSyncService stockSyncService;
     private final PaymentRollbackService paymentRollbackService;
     private final OrderRepository orderRepository;
     
@@ -60,14 +58,14 @@ public class CheckoutService implements ICheckoutService {
             // If any item fails, exception is thrown and nothing is decremented
             for (var item : request.orderItems()) {
                 boolean decremented = redisStockService.decrementIfAvailable(
-                        item.productId(), 
+                        item.variantSku(), 
                         item.quantity()
                 );
                 
                 if (!decremented) {
-                    log.warn("Redis stock insufficient after previous check: productId={}, quantity={}", 
-                            item.productId(), item.quantity());
-                    throw new RuntimeException("Stock insufficient for product: " + item.productId());
+                    log.warn("Redis stock insufficient after previous check: variantSku={}, quantity={}", 
+                            item.variantSku(), item.quantity());
+                    throw new RuntimeException("Stock insufficient for product: " + item.variantSku());
                 }
             }
             log.debug("Redis stock decremented successfully: userId={}", userId);
@@ -86,10 +84,10 @@ public class CheckoutService implements ICheckoutService {
             
             for (var item : request.orderItems()) {
                 try {
-                    redisStockService.incrementStock(item.productId(), item.quantity());
+                    redisStockService.incrementStock(item.variantSku(), item.quantity());
                 } catch (Exception ex) {
-                    log.error("Failed to rollback Redis stock: productId={}, error={}", 
-                            item.productId(), ex.getMessage());
+                    log.error("Failed to rollback Redis stock: variantSku={}, error={}", 
+                            item.variantSku(), ex.getMessage());
                 }
             }
             
@@ -108,7 +106,7 @@ public class CheckoutService implements ICheckoutService {
         log.info("Processing payment for order: orderId={}, success={}", 
                 orderId, paymentSuccessful);
         
-        Order order = orderRepository.findById(orderId)
+        Order order = orderRepository.findById(java.util.Objects.requireNonNull(orderId))
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found: " + orderId));
         
         if (order.getStatus() != OrderStatus.PENDING) {
@@ -148,13 +146,13 @@ public class CheckoutService implements ICheckoutService {
      */
     private void checkRedisStockAvailable(OrderRequest request) {
         for (var item : request.orderItems()) {
-            long availableStock = redisStockService.getStock(item.productId());
+            long availableStock = redisStockService.getStock(item.variantSku());
             
             if (availableStock < item.quantity()) {
-                log.warn("Insufficient Redis stock: productId={}, required={}, available={}", 
-                        item.productId(), item.quantity(), availableStock);
+                log.warn("Insufficient Redis stock: variantSku={}, required={}, available={}", 
+                        item.variantSku(), item.quantity(), availableStock);
                 throw new RuntimeException(
-                        "Insufficient stock for product: " + item.productId() + 
+                        "Insufficient stock for product: " + item.variantSku() + 
                         ". Available: " + availableStock + ", Required: " + item.quantity()
                 );
             }

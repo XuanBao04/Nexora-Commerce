@@ -8,9 +8,11 @@ import { formatPrice } from '@features/cart/utils/priceCalculation';
 import { 
   FaSync, FaEdit, FaTrash, FaPlus, FaSearch, FaBox, 
   FaCloudUploadAlt, FaExclamationTriangle, FaCheck, FaTimes, 
-  FaRegFileImage, FaTags, FaMinus
-} from "react-icons/fa";
+  FaRegFileImage, FaTags, FaMinus} from "react-icons/fa";
 import { toast } from "react-toastify";
+import { adminApiService } from '@features/admin/services/adminApiService';
+import { useAdminPagination } from '@features/admin/hooks/useAdminPagination';
+import { AdminPagination } from "@/features/admin/components/AdminPagination";
 
 interface VariantFormState {
   sku: string;
@@ -30,9 +32,8 @@ interface ProductFormData {
 
 const ProductManagement = () => {
   const [products, setProducts] = useState<Product[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const { page, size, pagination, setPage, updatePaginationData, isLoading, setIsLoading, error, setError } = useAdminPagination(10);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   
   // Search & Filter state
   const [searchTerm, setSearchTerm] = useState("");
@@ -70,11 +71,12 @@ const ProductManagement = () => {
     setError(null);
     try {
       const [productsData, cats, brs] = await Promise.all([
-        productService.getAllProducts(),
+        adminApiService.getAllProducts(page, size, searchTerm),
         categoryService.getCategoryTree(),
         brandService.getAllBrands(),
       ]);
-      setProducts(productsData);
+      setProducts(productsData.items);
+      updatePaginationData(productsData.pagination as any);
       setCategories(cats);
       setBrands(brs);
     } catch (err) {
@@ -86,7 +88,7 @@ const ProductManagement = () => {
 
   useEffect(() => {
     fetchMetadataAndProducts();
-  }, []);
+  }, [page, size]);
 
   // Clean up Object URL to prevent memory leaks when preview URL changes
   useEffect(() => {
@@ -352,16 +354,7 @@ const ProductManagement = () => {
     filteredProducts = filteredProducts.filter((p) => p.status === statusFilter);
   }
 
-  if (searchTerm.trim()) {
-    const keyword = searchTerm.toLowerCase();
-    filteredProducts = filteredProducts.filter(
-      (p) =>
-        p.name.toLowerCase().includes(keyword) ||
-        p.id.toLowerCase().includes(keyword) ||
-        (p.description && p.description.toLowerCase().includes(keyword)) ||
-        (p.variants && p.variants.some(v => v.sku.toLowerCase().includes(keyword)))
-    );
-  }
+  // Search term is handled via API now
 
   return (
     <div className="surface p-6 sm:p-8 bg-white/70 backdrop-blur-md border border-zinc-200/50 rounded-2xl space-y-6 sm:space-y-8">
@@ -740,6 +733,7 @@ const ProductManagement = () => {
             placeholder="Tìm kiếm theo tên sản phẩm, mã SKU biến thể hoặc mô tả..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && fetchMetadataAndProducts()}
             className="w-full pl-10 pr-4 h-11 bg-zinc-50 border border-zinc-200/60 focus:bg-white focus:border-zinc-950 focus:ring-4 focus:ring-zinc-900/5 rounded-xl text-xs font-semibold outline-none transition duration-200 text-zinc-700 placeholder:text-zinc-400"
           />
         </div>
@@ -887,6 +881,9 @@ const ProductManagement = () => {
           </table>
         </div>
       )}
+
+      {/* Pagination Controls */}
+      <AdminPagination pagination={pagination} onPageChange={setPage} />
     </div>
   );
 };

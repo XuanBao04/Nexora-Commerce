@@ -53,7 +53,7 @@ public class ProductServiceImpl implements IProductService {
     }
 
     private Product getProductEntityById(String productId) {
-        return productRepository.findById(productId)
+        return productRepository.findByIdWithAssociations(java.util.Objects.requireNonNull(productId))
                 .orElseThrow(() -> new ResourceNotFoundException(MessageConstant.Product.NOT_FOUND + productId));
     }
 
@@ -136,7 +136,7 @@ public class ProductServiceImpl implements IProductService {
                 .status(com.nexoracommerce.common.enums.ProductStatus.valueOf(request.status()))
                 .imagePublicId(imagePublicId)
                 .build();
-        Product savedProduct = productRepository.save(product);
+        Product savedProduct = productRepository.save(java.util.Objects.requireNonNull(product));
 
         // Initialize default product variant with 0 quantity
         ProductVariant variant = ProductVariant.builder()
@@ -147,7 +147,7 @@ public class ProductServiceImpl implements IProductService {
                 .reservedQuantity(0)
                 .soldQuantity(0)
                 .build();
-        productVariantRepository.save(variant);
+        productVariantRepository.save(java.util.Objects.requireNonNull(variant));
 
         // Initialize primary image if present
         if (imageUrl != null) {
@@ -156,7 +156,7 @@ public class ProductServiceImpl implements IProductService {
                     .imageUrl(imageUrl)
                     .isPrimary(true)
                     .build();
-            productImageRepository.save(pImage);
+            productImageRepository.save(java.util.Objects.requireNonNull(pImage));
         }
 
         return productMapper.toProductResponse(savedProduct);

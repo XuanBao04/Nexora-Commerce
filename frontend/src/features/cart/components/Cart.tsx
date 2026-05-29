@@ -7,7 +7,10 @@ import AddressForm from "./AddressForm";
 import { orderService } from "@/features/orders/services/orderService";
 import { inventoryService } from "@/features/inventory/services/inventoryService";
 import { Navigate } from "react-router-dom";
-import { ShippingAddress } from "@/features/orders/types/order";
+import { OrderItemRequest, OrderRequest, ShippingAddress } from "@/features/orders/types/order";
+import { productService } from "@/features/products/services/productService";
+import { CartItemResponse } from "@/features/cart/types/cart";
+import { Product } from "@/features/products/types/product";
 import { toast } from "react-toastify";
 import { FaArrowLeft, FaLock, FaShoppingCart } from "react-icons/fa";
 
@@ -19,6 +22,41 @@ type OrderPreview = {
   shippingFee: number;
   totalPrice: number;
   couponCode: string | null;
+};
+
+const getVariantName = (product: Product, variantSku: string): string => {
+  const variant = product.variants?.find((item) => item.sku === variantSku);
+  if (!variant?.attributes?.length) {
+    return "Default";
+  }
+
+  return variant.attributes
+    .map((attribute) => `${attribute.name}: ${attribute.value}`)
+    .join(", ");
+};
+
+const buildOrderItemRequest = async (
+  item: CartItemResponse,
+): Promise<OrderItemRequest> => {
+  try {
+    const product = await productService.getProductById(item.productId);
+
+    return {
+      variantSku: item.productId,
+      productName: product.name || item.productId,
+      variantName: getVariantName(product, item.productId),
+      quantity: item.quantity,
+      price: item.price,
+    };
+  } catch {
+    return {
+      variantSku: item.productId,
+      productName: item.productId,
+      variantName: "Default",
+      quantity: item.quantity,
+      price: item.price,
+    };
+  }
 };
 
 const Cart = () => {
@@ -112,13 +150,13 @@ const Cart = () => {
         return;
       }
 
-      const orderRequest = {
+      const orderItems = await Promise.all(
+        cart.items.map((item) => buildOrderItemRequest(item)),
+      );
+
+      const orderRequest: OrderRequest = {
         userId,
-        orderItems: cart.items.map((item) => ({
-          productId: item.productId,
-          quantity: item.quantity,
-          price: item.price,
-        })),
+        orderItems,
         couponCode: couponCode ?? undefined,
         ...shippingAddress,
       };

@@ -1,7 +1,7 @@
 package com.nexoracommerce.order.service.impl;
 
 import com.nexoracommerce.order.repository.OrderRepository;
-import com.nexoracommerce.user.entity.User;
+
 import com.nexoracommerce.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -32,7 +32,7 @@ public class OrderSecurityService {
             return false;
         }
 
-        java.util.Optional<com.nexoracommerce.order.entity.Order> orderOpt = orderRepository.findById(orderId);
+        java.util.Optional<com.nexoracommerce.order.entity.Order> orderOpt = orderRepository.findById(java.util.Objects.requireNonNull(orderId));
         if (orderOpt.isEmpty()) {
             return true;
         }

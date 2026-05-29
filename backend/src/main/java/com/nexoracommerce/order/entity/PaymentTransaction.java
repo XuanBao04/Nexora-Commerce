@@ -1,9 +1,9 @@
-package com.nexoracommerce.payment.entity;
+package com.nexoracommerce.order.entity;
 
-import com.nexoracommerce.order.entity.Order;
+import com.nexoracommerce.order.enums.PaymentMethod;
+import com.nexoracommerce.order.enums.TransactionStatus;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
@@ -13,7 +13,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
-import org.hibernate.annotations.CreationTimestamp;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
 
@@ -26,8 +27,10 @@ import java.time.LocalDateTime;
 @ToString(exclude = "order")
 @Entity
 @Table(name = "payment_transactions", indexes = {
-    @Index(name = "idx_payment_trans_order", columnList = "order_id")
+    @Index(name = "idx_payment_trans_order", columnList = "order_id"),
+    @Index(name = "idx_payment_trans_status", columnList = "status")
 })
+@EntityListeners(AuditingEntityListener.class)
 public class PaymentTransaction {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -38,27 +41,26 @@ public class PaymentTransaction {
     @JoinColumn(name = "order_id", nullable = false)
     private Order order;
 
-    @NotBlank(message = "Payment method is required")
-    @Size(max = 50, message = "Payment method must not exceed 50 characters")
+    @NotNull(message = "Payment method is required")
+    @Enumerated(EnumType.STRING)
     @Column(name = "payment_method", nullable = false, length = 50)
-    private String paymentMethod; // 'COD', 'VNPAY', 'MOMO'
+    private PaymentMethod paymentMethod; // 'COD', 'VNPAY', 'MOMO'
 
     @NotNull(message = "Amount is required")
     @Min(value = 0, message = "Amount must be non-negative")
     @Column(nullable = false)
-    private Long amount;
+    private Long amount; // Amount in VND
 
     @Size(max = 255, message = "Provider transaction ID must not exceed 255 characters")
     @Column(name = "provider_transaction_id", length = 255)
-    private String providerTransactionId; // Reference ID from VNPAY/Momo
+    private String providerTransactionId; // Reference ID from payment provider
 
-    @NotBlank(message = "Status is required")
-    @Size(max = 50, message = "Status must not exceed 50 characters")
+    @NotNull(message = "Payment status is required")
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
-    private String status; // 'PENDING', 'SUCCESS', 'FAILED'
+    private TransactionStatus status; // 'PENDING', 'SUCCESS', 'FAILED'
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    @CreationTimestamp
+    @CreatedDate
     private LocalDateTime createdAt;
 }
-

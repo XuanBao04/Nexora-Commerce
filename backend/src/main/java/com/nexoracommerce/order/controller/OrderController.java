@@ -2,9 +2,11 @@ package com.nexoracommerce.order.controller;
 
 import com.nexoracommerce.common.response.ApiResponse;
 import com.nexoracommerce.order.dto.request.OrderRequest;
+import com.nexoracommerce.order.dto.request.OrderStatusChangeRequest;
 import com.nexoracommerce.order.dto.response.OrderPreviewResponse;
 import com.nexoracommerce.order.dto.response.OrderResponse;
 import com.nexoracommerce.order.service.IOrderService;
+import com.nexoracommerce.common.enums.OrderStatus;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -162,7 +164,9 @@ public class OrderController {
             @PathVariable String orderId,
             @Parameter(description = "Target status transition state", example = "COMPLETED")
             @RequestParam String status) {
-        OrderResponse response = orderService.updateOrderStatus(orderId, status);
+        OrderStatus orderStatus = OrderStatus.valueOf(status);
+        OrderStatusChangeRequest request = new OrderStatusChangeRequest(orderId, orderStatus, null);
+        OrderResponse response = orderService.updateOrderStatus(request);
         return ResponseEntity.ok(ApiResponse.ok(response, "Order status updated successfully"));
     }
 

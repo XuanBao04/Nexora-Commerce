@@ -2,7 +2,10 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { brandService } from "../services/brandService";
 import { BrandResponse, BrandRequest } from "../types/product";
-import { FaSync, FaEdit, FaTrash, FaPlus, FaTimes, FaSearch, FaExclamationTriangle, FaStar } from "react-icons/fa";
+import { FaSync, FaEdit, FaTrash, FaPlus, FaTimes, FaSearch, FaExclamationTriangle, FaStar} from "react-icons/fa";
+import { adminApiService } from "@/features/admin/services/adminApiService";
+import { useAdminPagination } from "@/features/admin/hooks/useAdminPagination";
+import { AdminPagination } from '@/features/admin/components/AdminPagination';
 import { toast } from "react-toastify";
 
 const BrandManagement = () => {
@@ -11,23 +14,47 @@ const BrandManagement = () => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
 
-  const [currentPage, setCurrentPage] = useState(0);
-  const itemsPerPage = 10;
+  const { page, size, pagination, setPage, updatePaginationData, isLoading: paginatingLoading, setIsLoading, error: paginatingError, setError } = useAdminPagination(10);
 
   const [formData, setFormData] = useState<BrandRequest>({
     name: "",
     slug: "",
   });
 
-  const { data: brands = [], isLoading, error: fetchError } = useQuery({
-    queryKey: ["brands"],
+  // Fetch tree for dropdowns if needed elsewhere
+  const { isLoading: isTreeLoading, error: treeError } = useQuery({
+    queryKey: ["allBrands"],
     queryFn: brandService.getAllBrands,
   });
+
+  const [paginatedBrands, setPaginatedBrands] = useState<BrandResponse[]>([]);
+  const fetchPaginatedBrands = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await adminApiService.getAllBrands(page, size);
+      setPaginatedBrands(response.items);
+      updatePaginationData(response.pagination as any);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchPaginatedBrands();
+  }, [page, size]);
+
+  const isLoading = isTreeLoading || paginatingLoading;
+  const fetchError = treeError || paginatingError;
+
 
   const createMutation = useMutation({
     mutationFn: (data: BrandRequest) => brandService.createBrand(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["brands"] });
+      queryClient.invalidateQueries({ queryKey: ["allBrands"] });
+      fetchPaginatedBrands();
       toast.success("Tạo thương hiệu thành công!");
       handleCloseForm();
     },
@@ -39,7 +66,8 @@ const BrandManagement = () => {
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: BrandRequest }) => brandService.updateBrand(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["brands"] });
+      queryClient.invalidateQueries({ queryKey: ["allBrands"] });
+      fetchPaginatedBrands();
       toast.success("Cập nhật thương hiệu thành công!");
       handleCloseForm();
     },
@@ -51,7 +79,8 @@ const BrandManagement = () => {
   const deleteMutation = useMutation({
     mutationFn: (id: number) => brandService.deleteBrand(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["brands"] });
+      queryClient.invalidateQueries({ queryKey: ["allBrands"] });
+      fetchPaginatedBrands();
       toast.success("Xóa thương hiệu thành công!");
     },
     onError: (error: any) => {
@@ -66,18 +95,13 @@ const BrandManagement = () => {
     },
   });
 
-  let filteredBrands = brands;
+  // Local search only for the current page
+  let displayBrands = paginatedBrands;
   if (searchTerm) {
-    filteredBrands = filteredBrands.filter(
+    displayBrands = displayBrands.filter(
       (b) => b.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }
-
-  const totalPages = Math.ceil(filteredBrands.length / itemsPerPage);
-  const paginatedBrands = filteredBrands.slice(
-    currentPage * itemsPerPage,
-    (currentPage + 1) * itemsPerPage
-  );
 
   const handleOpenCreateForm = () => {
     setFormData({ name: "", slug: "" });
@@ -146,7 +170,7 @@ const BrandManagement = () => {
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value);
-              setCurrentPage(0);
+              setPage(0);
             }}
             className="w-full pl-10 pr-4 h-11 bg-zinc-50 border border-zinc-200/60 focus:bg-white focus:border-zinc-950 focus:ring-4 focus:ring-zinc-900/5 rounded-xl text-xs font-semibold outline-none transition duration-200 text-zinc-700 placeholder:text-zinc-400"
           />
@@ -154,7 +178,7 @@ const BrandManagement = () => {
 
         <div className="flex gap-2.5">
           <button
-            onClick={() => queryClient.invalidateQueries({ queryKey: ["brands"] })}
+            onClick={() => { queryClient.invalidateQueries({ queryKey: ["allBrands"] }); fetchPaginatedBrands(); }}
             disabled={isLoading}
             className="h-11 flex items-center justify-center gap-2 px-5 bg-zinc-950 text-white rounded-xl hover:bg-zinc-800 disabled:bg-zinc-100 disabled:text-zinc-400 font-extrabold text-xs uppercase tracking-wider transition-all duration-300 active:scale-95"
           >
@@ -233,7 +257,7 @@ const BrandManagement = () => {
           <div className="w-8 h-8 border-2 border-zinc-950/20 border-t-zinc-950 rounded-full animate-spin mb-3"></div>
           <p className="text-zinc-400 text-xs font-bold uppercase tracking-wider animate-pulse">Đang tải...</p>
         </div>
-      ) : paginatedBrands.length === 0 ? (
+      ) : displayBrands.length === 0 ? (
         <div className="text-center py-12 bg-zinc-50/50 rounded-2xl border border-dashed border-zinc-200 p-8">
           <FaStar className="w-10 h-10 text-zinc-300 mx-auto mb-3" />
           <p className="text-zinc-500 text-xs font-bold uppercase tracking-wider">Không tìm thấy thương hiệu</p>
@@ -251,7 +275,7 @@ const BrandManagement = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-100">
-                {paginatedBrands.map((brand) => (
+                {displayBrands.map((brand) => (
                   <tr key={brand.id} className="hover:bg-zinc-50/40 transition-colors">
                     <td className="py-3 px-4 text-center font-bold text-zinc-400">#{brand.id}</td>
                     <td className="py-3 px-4 font-bold text-zinc-800">{brand.name}</td>
@@ -283,27 +307,8 @@ const BrandManagement = () => {
             </table>
           </div>
 
-          {totalPages > 1 && (
-            <div className="flex justify-center items-center gap-2 pt-4">
-              <button
-                onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
-                disabled={currentPage === 0}
-                className="px-3 py-1.5 rounded-lg border border-zinc-200 bg-white text-xs font-bold text-zinc-600 disabled:opacity-50 hover:bg-zinc-50"
-              >
-                Trước
-              </button>
-              <span className="text-xs font-bold text-zinc-600">
-                {currentPage + 1} / {totalPages}
-              </span>
-              <button
-                onClick={() => setCurrentPage(p => Math.min(totalPages - 1, p + 1))}
-                disabled={currentPage >= totalPages - 1}
-                className="px-3 py-1.5 rounded-lg border border-zinc-200 bg-white text-xs font-bold text-zinc-600 disabled:opacity-50 hover:bg-zinc-50"
-              >
-                Sau
-              </button>
-            </div>
-          )}
+          {/* Pagination Controls */}
+          <AdminPagination pagination={pagination} onPageChange={setPage} />
         </div>
       )}
     </div>

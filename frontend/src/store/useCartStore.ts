@@ -2,7 +2,6 @@ import { create } from 'zustand';
 import { cartService } from '@features/cart/services/cartService';
 import { AxiosError } from 'axios';
 import { CartResponse, CartItemRequest } from '@features/cart/types/cart';
-import { refreshSession } from '@/services/api/apiClient';
 
 interface CartState {
   cart: CartResponse | null;
@@ -107,11 +106,6 @@ export const useCartStore = create<CartState>((set, get) => ({
   initSessionAndCart: async () => {
     const userId = getCurrentUserId();
     if (userId) {
-      try {
-        await refreshSession();
-      } catch {
-        // ignore
-      }
       await get().fetchCart();
     }
     set({ isInitialized: true });

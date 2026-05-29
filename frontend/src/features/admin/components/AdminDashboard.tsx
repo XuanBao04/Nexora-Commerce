@@ -6,13 +6,14 @@ import CouponManagement from '@features/coupon/components/CouponManagement';
 import ProductManagement from '@features/products/components/ProductManagement';
 import CategoryManagement from '@features/products/components/CategoryManagement';
 import BrandManagement from '@features/products/components/BrandManagement';
-import { FaBox, FaClipboardList, FaSignOutAlt, FaStore, FaTag, FaFolder, FaStar } from "react-icons/fa";
+import UserManagement from '@features/admin/components/UserManagement';
+import { FaBox, FaClipboardList, FaSignOutAlt, FaStore, FaTag, FaFolder, FaStar, FaUsers } from "react-icons/fa";
 import { useAuthStore } from "@/store/useAuthStore";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const { role, username, logout } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<"products" | "inventory" | "orders" | "coupons" | "categories" | "brands">("products");
+  const [activeTab, setActiveTab] = useState<"products" | "inventory" | "orders" | "coupons" | "categories" | "brands" | "users">("products");
 
   useEffect(() => {
     if (role !== "ROLE_ADMIN" && role !== "ADMIN") {
@@ -142,6 +143,18 @@ const AdminDashboard = () => {
             <FaStar className="h-3.5 w-3.5" />
             Thương hiệu
           </button>
+          
+          <button
+            onClick={() => setActiveTab("users")}
+            className={`inline-flex h-11 items-center gap-2 rounded-xl px-4 text-xs font-bold uppercase tracking-wider transition-all duration-200 active:scale-95 ${
+              activeTab === "users"
+                ? "bg-zinc-950 text-white shadow-md"
+                : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950"
+            }`}
+          >
+            <FaUsers className="h-3.5 w-3.5" />
+            Tài khoản
+          </button>
         </div>
 
         {/* Active view renderer */}
@@ -163,6 +176,9 @@ const AdminDashboard = () => {
           </div>
           <div className={activeTab === "brands" ? "block" : "hidden"}>
             <BrandManagement />
+          </div>
+          <div className={activeTab === "users" ? "block" : "hidden"}>
+            <UserManagement />
           </div>
         </div>
       </main>

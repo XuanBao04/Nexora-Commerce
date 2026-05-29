@@ -1,21 +1,18 @@
-export interface OrderItem {
-  productId: string;
-  quantity: number;
-  price: number;
-}
-
 export interface OrderItemRequest {
-  productId: string;
+  variantSku: string;
+  productName: string;
+  variantName?: string;
   quantity: number;
   price: number;
 }
 
 export interface OrderItemResponse {
-  id: number;
-  productId: string;
+  id: number | null;
+  variantSku: string;
+  productName: string;
+  variantName?: string | null;
   quantity: number;
   price: number;
-  name: string;
 }
 
 export interface ShippingAddress {
@@ -37,7 +34,7 @@ export interface OrderResponse extends ShippingAddress {
   id: string;
   userId: string;
   items: OrderItemResponse[];
-  status: 'PENDING' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED';
+  status: 'PENDING' | 'CONFIRMED' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED';
   createdAt: string;
   lastModifiedDate: string;
   subtotal: number;

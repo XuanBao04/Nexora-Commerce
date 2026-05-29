@@ -14,6 +14,14 @@ export const categoryService = {
   },
 
   /**
+   * Get category by ID or slug
+   */
+  async getCategory(idOrSlug: string | number): Promise<CategoryResponse> {
+    const response = await apiClient.get<ApiResponse<CategoryResponse>>(`${CATEGORY_API}/${idOrSlug}`);
+    return response.data.data;
+  },
+
+  /**
    * Create a new category (ADMIN only)
    */
   async createCategory(data: CategoryRequest): Promise<CategoryResponse> {

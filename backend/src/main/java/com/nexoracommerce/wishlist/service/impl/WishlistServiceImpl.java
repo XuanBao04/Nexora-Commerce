@@ -38,7 +38,7 @@ public class WishlistServiceImpl implements IWishlistService {
         UUID userUuid = UUID.fromString(userId);
         
         // Ensure user exists
-        if (!userRepository.existsById(userUuid)) {
+        if (!userRepository.existsById(java.util.Objects.requireNonNull(userUuid))) {
             throw new ResourceNotFoundException("User not found with id: " + userId);
         }
 
@@ -52,10 +52,10 @@ public class WishlistServiceImpl implements IWishlistService {
         log.info("Adding product {} to wishlist for user: {}", request.productId(), userId);
         UUID userUuid = UUID.fromString(userId);
 
-        User user = userRepository.findById(userUuid)
+        User user = userRepository.findById(java.util.Objects.requireNonNull(userUuid))
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
 
-        Product product = productRepository.findById(request.productId())
+        Product product = productRepository.findById(java.util.Objects.requireNonNull(request.productId()))
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + request.productId()));
 
         if (wishlistRepository.existsByUserIdAndProductId(userUuid, request.productId())) {
@@ -67,7 +67,7 @@ public class WishlistServiceImpl implements IWishlistService {
                 .product(product)
                 .build();
 
-        Wishlist saved = wishlistRepository.save(wishlist);
+        Wishlist saved = wishlistRepository.save(java.util.Objects.requireNonNull(wishlist));
         return wishlistMapper.toResponse(saved);
     }
 
@@ -78,13 +78,13 @@ public class WishlistServiceImpl implements IWishlistService {
         UUID userUuid = UUID.fromString(userId);
 
         // Ensure user exists
-        if (!userRepository.existsById(userUuid)) {
+        if (!userRepository.existsById(java.util.Objects.requireNonNull(userUuid))) {
             throw new ResourceNotFoundException("User not found with id: " + userId);
         }
 
         Wishlist wishlist = wishlistRepository.findByUserIdAndProductId(userUuid, productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product " + productId + " is not in the wishlist of user " + userId));
 
-        wishlistRepository.delete(wishlist);
+        wishlistRepository.delete(java.util.Objects.requireNonNull(wishlist));
     }
 }

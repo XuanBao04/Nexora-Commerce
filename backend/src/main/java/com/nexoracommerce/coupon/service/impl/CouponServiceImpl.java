@@ -59,7 +59,7 @@ public class CouponServiceImpl implements ICouponService {
         }
 
         try {
-            Coupon coupon = couponRepository.findById(couponCode).orElse(null);
+            Coupon coupon = couponRepository.findById(java.util.Objects.requireNonNull(couponCode)).orElse(null);
 
             if (coupon == null) {
                 return false;
@@ -93,7 +93,7 @@ public class CouponServiceImpl implements ICouponService {
     public Coupon getCouponByCode(String couponCode) {
         validateCouponCodeNotBlank(couponCode);
         
-        return couponRepository.findById(couponCode)
+        return couponRepository.findById(java.util.Objects.requireNonNull(couponCode))
                 .orElseThrow(() -> new ResourceNotFoundException(MessageConstant.Coupon.NOT_FOUND + couponCode));
     }
 
@@ -114,7 +114,7 @@ public class CouponServiceImpl implements ICouponService {
         }
 
         Coupon coupon = couponMapper.toEntity(request);
-        Coupon saved = couponRepository.save(coupon);
+        Coupon saved = couponRepository.save(java.util.Objects.requireNonNull(coupon));
         return couponMapper.toResponse(saved);
     }
 
@@ -129,7 +129,7 @@ public class CouponServiceImpl implements ICouponService {
         Objects.requireNonNull(request, "Coupon update request data cannot be null");
         validateCouponCodeNotBlank(code);
 
-        Coupon existing = couponRepository.findById(code)
+        Coupon existing = couponRepository.findById(java.util.Objects.requireNonNull(code))
                 .orElseThrow(() -> new ResourceNotFoundException(MessageConstant.Coupon.NOT_FOUND + code));
 
         if (request.discountPercent() != null) {
@@ -144,7 +144,7 @@ public class CouponServiceImpl implements ICouponService {
 
         couponMapper.updateEntityFromRequest(request, existing);
 
-        Coupon saved = couponRepository.save(existing);
+        Coupon saved = couponRepository.save(java.util.Objects.requireNonNull(existing));
         return couponMapper.toResponse(saved);
     }
 
@@ -153,11 +153,11 @@ public class CouponServiceImpl implements ICouponService {
     public void deleteCoupon(String code) {
         validateCouponCodeNotBlank(code);
 
-        if (!couponRepository.existsById(code)) {
+        if (!couponRepository.existsById(java.util.Objects.requireNonNull(code))) {
             throw new ResourceNotFoundException(MessageConstant.Coupon.NOT_FOUND + code);
         }
 
-        couponRepository.deleteById(code);
+        couponRepository.deleteById(java.util.Objects.requireNonNull(code));
         log.info("Deleted coupon: {}", code);
     }
 

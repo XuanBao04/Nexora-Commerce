@@ -57,7 +57,7 @@ public class AuthServiceImpl implements IAuthService {
 
         // Store refresh token in Redis with TTL
         String redisKey = "refresh_token:" + refreshToken;
-        redisTemplate.opsForValue().set(redisKey, user.getUsername(), refreshTokenExpirationMs, java.util.concurrent.TimeUnit.MILLISECONDS);
+        redisTemplate.opsForValue().set(java.util.Objects.requireNonNull(redisKey), java.util.Objects.requireNonNull(user.getUsername()), refreshTokenExpirationMs, java.util.concurrent.TimeUnit.MILLISECONDS);
 
         return toAuthResponse(user, MessageConstant.Auth.LOGIN_SUCCESS, accessToken, refreshToken);
     }
@@ -75,7 +75,7 @@ public class AuthServiceImpl implements IAuthService {
         }
 
         Role customerRole = roleRepository.findByName("ROLE_CUSTOMER")
-                .orElseGet(() -> roleRepository.save(Role.builder().name("ROLE_CUSTOMER").build()));
+                .orElseGet(() -> roleRepository.save(java.util.Objects.requireNonNull(Role.builder().name("ROLE_CUSTOMER").build())));
 
         User user = User.builder()
                 .username(request.username())
@@ -85,7 +85,7 @@ public class AuthServiceImpl implements IAuthService {
                 .roles(java.util.Set.of(customerRole))
                 .build();
 
-        userRepository.save(user);
+        userRepository.save(java.util.Objects.requireNonNull(user));
 
         return toAuthResponse(user, MessageConstant.Auth.REGISTER_SUCCESS);
     }

@@ -5,7 +5,7 @@ import com.nexoracommerce.product.dto.request.ProductFormRequest;
 import com.nexoracommerce.product.dto.response.ProductResponse;
 import com.nexoracommerce.product.service.IProductService;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

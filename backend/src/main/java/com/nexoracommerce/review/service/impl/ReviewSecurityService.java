@@ -21,7 +21,7 @@ public class ReviewSecurityService {
             return false;
         }
 
-        Optional<ProductReview> reviewOpt = reviewRepository.findById(reviewId);
+        Optional<ProductReview> reviewOpt = reviewRepository.findById(java.util.Objects.requireNonNull(reviewId));
         if (reviewOpt.isEmpty()) {
             return true; // Let the service layer throw ResourceNotFoundException instead of AccessDeniedException
         }

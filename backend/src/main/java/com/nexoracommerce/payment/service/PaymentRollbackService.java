@@ -36,7 +36,7 @@ public class PaymentRollbackService {
         
         try {
             for (OrderItem item : order.getOrderItems()) {
-                rollbackOrderItemPayment(item.getProductId(), item.getQuantity());
+                rollbackOrderItemPayment(item.getVariant().getSku(), item.getQuantity());
             }
             log.info("Payment rollback completed for order: orderId={}", order.getId());
         } catch (Exception e) {
@@ -48,22 +48,22 @@ public class PaymentRollbackService {
     /**
      * Rollbacks a single order item payment
      */
-    private void rollbackOrderItemPayment(String productId, Integer quantity) {
+    private void rollbackOrderItemPayment(String variantSku, Integer quantity) {
         try {
             // 1. Release reserved stock in DB (back to available pool)
-            inventoryService.releaseStock(productId, quantity);
-            log.info("Released reserved stock in DB: productId={}, quantity={}", 
-                    productId, quantity);
+            inventoryService.releaseStock(variantSku, quantity);
+            log.info("Released reserved stock in DB: variantSku={}, quantity={}", 
+                    variantSku, quantity);
             
             // 2. Increment stock in Redis
-            redisStockService.incrementStock(productId, quantity);
-            log.info("Incremented stock in Redis: productId={}, quantity={}", 
-                    productId, quantity);
+            redisStockService.incrementStock(variantSku, quantity);
+            log.info("Incremented stock in Redis: variantSku={}, quantity={}", 
+                    variantSku, quantity);
             
         } catch (Exception e) {
-            log.error("Error rolling back order item: productId={}, quantity={}", 
-                    productId, quantity, e);
-            throw new RuntimeException("Payment rollback failed for product: " + productId, e);
+            log.error("Error rolling back order item: variantSku={}, quantity={}", 
+                    variantSku, quantity, e);
+            throw new RuntimeException("Payment rollback failed for variant: " + variantSku, e);
         }
     }
     

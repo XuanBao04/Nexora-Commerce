@@ -148,6 +148,6 @@ public class SecurityConfig {
     @Bean
     public CorsFilter corsFilter() {
         logger.info("Creating CORS filter bean");
-        return new CorsFilter(corsConfigurationSource());
+        return new CorsFilter(java.util.Objects.requireNonNull(corsConfigurationSource()));
     }
 }

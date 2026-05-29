@@ -10,6 +10,8 @@ const getStatusBadgeClass = (status: OrderResponse["status"]) => {
   switch (status) {
     case "PENDING":
       return "bg-amber-50 text-amber-700 border-amber-200/40";
+    case "CONFIRMED":
+      return "bg-cyan-50 text-cyan-700 border-cyan-200/40";
     case "PROCESSING":
       return "bg-indigo-50 text-indigo-700 border-indigo-200/40";
     case "SHIPPED":
@@ -27,6 +29,8 @@ const getStatusLabel = (status: OrderResponse["status"]) => {
   switch (status) {
     case "PENDING":
       return "Chờ xác nhận";
+    case "CONFIRMED":
+      return "Đã xác nhận";
     case "PROCESSING":
       return "Đang xử lý";
     case "SHIPPED":
@@ -63,6 +67,9 @@ export default function Order() {
         const map: Record<string, { name: string; imageUrl?: string }> = {};
         products.forEach((p) => {
           map[p.id] = { name: p.name, imageUrl: p.imageUrl };
+          p.variants?.forEach((variant) => {
+            map[variant.sku] = { name: p.name, imageUrl: p.imageUrl };
+          });
         });
         setProductMap(map);
       } catch (err) {
@@ -277,11 +284,12 @@ export default function Order() {
                       <div className="absolute top-2 left-4 right-4 h-0.5 bg-zinc-200 -z-0"></div>
                       {[
                         { status: 'PENDING', label: 'Chờ xác nhận' },
+                        { status: 'CONFIRMED', label: 'Đã xác nhận' },
                         { status: 'PROCESSING', label: 'Đang xử lý' },
                         { status: 'SHIPPED', label: 'Đang giao' },
                         { status: 'DELIVERED', label: 'Đã giao' }
                       ].map((step, index) => {
-                        const statusFlow = ['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED'];
+                        const statusFlow = ['PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED'];
                         const currentStatusIndex = order.status === 'CANCELLED' ? -1 : statusFlow.indexOf(order.status);
                         const isCompleted = currentStatusIndex >= index;
                         const isCurrent = currentStatusIndex === index;
@@ -350,10 +358,10 @@ export default function Order() {
                     </div>
                     <ul className="divide-y divide-zinc-100 p-4 space-y-4">
                       {order.items.map((item) => {
-                        const product = productMap[item.productId];
+                        const product = productMap[item.variantSku];
                         return (
                           <li
-                            key={item.id}
+                            key={item.id ?? item.variantSku}
                             className="flex items-center gap-4 py-2 text-xs font-semibold text-zinc-500"
                           >
                             {/* Product Image */}
@@ -361,7 +369,7 @@ export default function Order() {
                               {product?.imageUrl ? (
                                 <img
                                   src={product.imageUrl}
-                                  alt={product.name || item.name}
+                                  alt={product.name || item.productName}
                                   className="h-full w-full object-cover"
                                   onError={(e) => {
                                     e.currentTarget.style.display = "none";
@@ -382,13 +390,19 @@ export default function Order() {
                             {/* Details Area */}
                             <div className="flex-1 min-w-0">
                               <h4 className="text-zinc-800 font-extrabold text-xs truncate">
-                                {product?.name || item.name || "Sản phẩm Aetheris"}
+                                {product?.name || item.productName || "Sản phẩm Aetheris"}
                               </h4>
                               <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest mt-1 flex items-center gap-1">
+                                {item.variantName && (
+                                  <>
+                                    <span>{item.variantName}</span>
+                                    <span className="text-zinc-200 font-normal">|</span>
+                                  </>
+                                )}
                                 <span>Đơn giá: {formatPrice(item.price)}</span>
                                 <span className="text-zinc-200 font-normal">|</span>
                                 <span>Số lượng: {item.quantity}</span>
-                                <span className="sr-only">{item.productId} - {item.quantity} x</span>
+                                <span className="sr-only">{item.variantSku} - {item.quantity} x</span>
                               </p>
                             </div>
 

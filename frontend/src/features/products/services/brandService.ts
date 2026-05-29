@@ -14,6 +14,14 @@ export const brandService = {
   },
 
   /**
+   * Get brand by ID or slug
+   */
+  async getBrand(idOrSlug: string | number): Promise<BrandResponse> {
+    const response = await apiClient.get<ApiResponse<BrandResponse>>(`${BRAND_API}/${idOrSlug}`);
+    return response.data.data;
+  },
+
+  /**
    * Create a new brand (ADMIN only)
    */
   async createBrand(data: BrandRequest): Promise<BrandResponse> {

@@ -30,6 +30,12 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   initializeAuth: async () => {
     try {
+      const hasPersistedSession = !!localStorage.getItem("userId");
+      if (!hasPersistedSession) {
+        set({ user: null, isAuthenticated: false, role: null, username: null, userId: null });
+        return;
+      }
+
       const token = await refreshSession();
       if (token) {
         const userId = localStorage.getItem("userId") || "";
@@ -57,11 +63,21 @@ export const useAuthStore = create<AuthState>((set) => ({
           });
         }
       } else {
-        // Clear if refresh fails
+        // Clear stale local state if refresh fails
+        localStorage.removeItem("userId");
+        localStorage.removeItem("username");
+        localStorage.removeItem("role");
+        localStorage.removeItem("email");
+        localStorage.removeItem("fullName");
         set({ user: null, isAuthenticated: false, role: null, username: null, userId: null });
       }
     } catch (err) {
       console.error("Failed to restore session:", err);
+      localStorage.removeItem("userId");
+      localStorage.removeItem("username");
+      localStorage.removeItem("role");
+      localStorage.removeItem("email");
+      localStorage.removeItem("fullName");
       set({ user: null, isAuthenticated: false, role: null, username: null, userId: null });
     } finally {
       set({ isLoading: false });

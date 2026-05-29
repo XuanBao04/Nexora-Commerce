@@ -11,6 +11,8 @@ import com.nexoracommerce.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.text.Normalizer;
 import java.util.List;
@@ -78,7 +80,7 @@ public class CategoryServiceImpl implements ICategoryService {
                 .parent(parent)
                 .build();
 
-        Category savedCategory = categoryRepository.save(category);
+        Category savedCategory = categoryRepository.save(java.util.Objects.requireNonNull(category));
         return categoryMapper.toResponse(savedCategory);
     }
 
@@ -124,10 +126,10 @@ public class CategoryServiceImpl implements ICategoryService {
     @Override
     @Transactional
     public void deleteCategory(Long id) {
-        if (!categoryRepository.existsById(id)) {
+        if (!categoryRepository.existsById(java.util.Objects.requireNonNull(id))) {
             throw new ResourceNotFoundException("Category not found with id: " + id);
         }
-        categoryRepository.deleteById(id);
+        categoryRepository.deleteById(java.util.Objects.requireNonNull(id));
     }
 
     private boolean isDescendant(Category category, Category potentialDescendant) {
@@ -152,5 +154,11 @@ public class CategoryServiceImpl implements ICategoryService {
                 .replaceAll("-+", "-")
                 .replaceAll("^-|-$", "");
         return slug;
+    }
+
+    @Override
+    public Page<CategoryResponse> getCategoriesPageable(Pageable pageable) {
+        Page<Category> categoryPage = categoryRepository.findAll(java.util.Objects.requireNonNull(pageable));
+        return categoryPage.map(categoryMapper::toResponse);
     }
 }

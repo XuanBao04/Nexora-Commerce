@@ -11,6 +11,8 @@ import com.nexoracommerce.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.text.Normalizer;
 import java.util.List;
@@ -39,7 +41,7 @@ public class BrandServiceImpl implements IBrandService {
 
     @Override
     public BrandResponse getBrandById(Long id) {
-        Brand brand = brandRepository.findById(id)
+        Brand brand = brandRepository.findById(java.util.Objects.requireNonNull(id))
                 .orElseThrow(() -> new ResourceNotFoundException("Brand not found with id: " + id));
         return brandMapper.toResponse(brand);
     }
@@ -70,14 +72,14 @@ public class BrandServiceImpl implements IBrandService {
                 .slug(slug)
                 .build();
 
-        Brand savedBrand = brandRepository.save(brand);
+        Brand savedBrand = brandRepository.save(java.util.Objects.requireNonNull(brand));
         return brandMapper.toResponse(savedBrand);
     }
 
     @Override
     @Transactional
     public BrandResponse updateBrand(Long id, BrandRequest request) {
-        Brand brand = brandRepository.findById(id)
+        Brand brand = brandRepository.findById(java.util.Objects.requireNonNull(id))
                 .orElseThrow(() -> new ResourceNotFoundException("Brand not found with id: " + id));
 
         String slug = request.slug();
@@ -101,10 +103,10 @@ public class BrandServiceImpl implements IBrandService {
     @Override
     @Transactional
     public void deleteBrand(Long id) {
-        if (!brandRepository.existsById(id)) {
+        if (!brandRepository.existsById(java.util.Objects.requireNonNull(id))) {
             throw new ResourceNotFoundException("Brand not found with id: " + id);
         }
-        brandRepository.deleteById(id);
+        brandRepository.deleteById(java.util.Objects.requireNonNull(id));
     }
 
     private String generateSlug(String input) {
@@ -118,5 +120,11 @@ public class BrandServiceImpl implements IBrandService {
                 .replaceAll("-+", "-")
                 .replaceAll("^-|-$", "");
         return slug;
+    }
+
+    @Override
+    public Page<BrandResponse> getBrandsPageable(Pageable pageable) {
+        Page<Brand> brandPage = brandRepository.findAll(java.util.Objects.requireNonNull(pageable));
+        return brandPage.map(brandMapper::toResponse);
     }
 }

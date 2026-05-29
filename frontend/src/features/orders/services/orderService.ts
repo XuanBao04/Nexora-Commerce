@@ -8,6 +8,7 @@ import { OrderResponse, OrderPreviewResponse, OrderRequest } from '../types/orde
 import { PaginationInfo, ApiResponse } from '@/types/apiResponse';
 
 const ORDER_API = '/v1/orders';
+const ADMIN_ORDER_API = '/v1/admin/orders';
 
 export interface PaginatedOrdersResponse {
   items: OrderResponse[];
@@ -49,11 +50,11 @@ export const orderService = {
     sort: string = 'createdAt',
     search?: string
   ): Promise<PaginatedOrdersResponse> {
-    const params: Record<string, any> = { page, size, sort };
+    const params: { page: number; size: number; sort: string; search?: string } = { page, size, sort };
     if (search) {
       params.search = search;
     }
-    const response = await apiClient.get<ApiResponse<OrderResponse[]>>(`${ORDER_API}`, {
+    const response = await apiClient.get<ApiResponse<OrderResponse[]>>(ADMIN_ORDER_API, {
       params,
     });
     
@@ -132,12 +133,27 @@ export const orderService = {
   },
 
   /**
-   * Update order status (ADMIN only)
+   * Update order status (User - PATCH)
+   * Response: ApiResponse<OrderResponse>
+   */
+  async updateOrderStatusUser(orderId: string, status: string): Promise<OrderResponse> {
+    const response = await apiClient.patch<ApiResponse<OrderResponse>>(
+      `${ORDER_API}/${orderId}/status`,
+      null,
+      {
+        params: { status },
+      }
+    );
+    return response.data.data;
+  },
+
+  /**
+   * Update order status (ADMIN - PUT)
    * Response: ApiResponse<OrderResponse>
    */
   async updateOrderStatus(orderId: string, status: string): Promise<OrderResponse> {
-    const response = await apiClient.patch<ApiResponse<OrderResponse>>(
-      `${ORDER_API}/${orderId}/status`,
+    const response = await apiClient.put<ApiResponse<OrderResponse>>(
+      `${ADMIN_ORDER_API}/${orderId}/status`,
       null,
       {
         params: { status },

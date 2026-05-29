@@ -23,7 +23,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -43,7 +43,7 @@ public class ProductReviewServiceImpl implements IProductReviewService {
     public Page<ProductReviewResponse> getReviewsByVariantSku(String variantSku, Pageable pageable) {
         log.info("Fetching reviews for variant SKU: {}", variantSku);
         
-        if (!productVariantRepository.existsById(variantSku)) {
+        if (!productVariantRepository.existsById(java.util.Objects.requireNonNull(variantSku))) {
             throw new ResourceNotFoundException("Product variant not found with SKU: " + variantSku);
         }
 
@@ -57,7 +57,7 @@ public class ProductReviewServiceImpl implements IProductReviewService {
         log.info("Creating review for variant SKU: {} by user: {}", request.variantSku(), userId);
         UUID userUuid = UUID.fromString(userId);
 
-        User user = userRepository.findById(userUuid)
+        User user = userRepository.findById(java.util.Objects.requireNonNull(userUuid))
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
 
         ProductVariant variant = productVariantRepository.findBySku(request.variantSku())
@@ -65,7 +65,7 @@ public class ProductReviewServiceImpl implements IProductReviewService {
 
         Order order = null;
         if (request.orderId() != null && !request.orderId().trim().isEmpty()) {
-            Order fetchedOrder = orderRepository.findById(request.orderId())
+            Order fetchedOrder = orderRepository.findById(java.util.Objects.requireNonNull(request.orderId()))
                     .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + request.orderId()));
 
             // Verify order belongs to the user
@@ -100,7 +100,7 @@ public class ProductReviewServiceImpl implements IProductReviewService {
             review.setImages(images);
         }
 
-        ProductReview saved = reviewRepository.save(review);
+        ProductReview saved = reviewRepository.save(java.util.Objects.requireNonNull(review));
         return reviewMapper.toResponse(saved);
     }
 
@@ -110,10 +110,10 @@ public class ProductReviewServiceImpl implements IProductReviewService {
         log.info("Admin {} is replying to review ID: {}", adminUserId, reviewId);
         UUID adminUuid = UUID.fromString(adminUserId);
 
-        User adminUser = userRepository.findById(adminUuid)
+        User adminUser = userRepository.findById(java.util.Objects.requireNonNull(adminUuid))
                 .orElseThrow(() -> new ResourceNotFoundException("Admin user not found with id: " + adminUserId));
 
-        ProductReview parentReview = reviewRepository.findById(reviewId)
+        ProductReview parentReview = reviewRepository.findById(java.util.Objects.requireNonNull(reviewId))
                 .orElseThrow(() -> new ResourceNotFoundException("Review not found with id: " + reviewId));
 
         if (parentReview.getParent() != null) {
@@ -137,9 +137,9 @@ public class ProductReviewServiceImpl implements IProductReviewService {
     @Transactional
     public void deleteReview(Long reviewId) {
         log.info("Deleting review ID: {}", reviewId);
-        ProductReview review = reviewRepository.findById(reviewId)
+        ProductReview review = reviewRepository.findById(java.util.Objects.requireNonNull(reviewId))
                 .orElseThrow(() -> new ResourceNotFoundException("Review not found with id: " + reviewId));
 
-        reviewRepository.delete(review);
+        reviewRepository.delete(java.util.Objects.requireNonNull(review));
     }
 }

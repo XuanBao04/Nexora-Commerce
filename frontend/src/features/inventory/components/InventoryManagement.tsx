@@ -248,7 +248,7 @@ const InventoryManagement = () => {
                   </td>
                   <td className="py-3 px-4 font-mono font-bold text-zinc-400 text-[10px] uppercase tracking-widest">{product.id.substring(0, 8)}...</td>
                   <td className="py-3 px-4 font-bold text-zinc-800 max-w-xs truncate">{product.name}</td>
-                  <td className="py-3 px-4 text-right font-extrabold text-zinc-950">{formatPrice(product.price)}</td>
+                  <td className="py-3 px-4 text-right font-extrabold text-zinc-950">{formatPrice(product.price ?? 0)}</td>
                   <td className="py-3 px-4 text-center">
                     <span className="inline-block px-2.5 py-1 rounded-lg font-black bg-emerald-50 text-emerald-700 border border-emerald-100/50">
                       {product.availableQuantity}

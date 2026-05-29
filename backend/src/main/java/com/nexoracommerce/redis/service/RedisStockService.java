@@ -24,7 +24,7 @@ public class RedisStockService implements IRedisStockService {
      * Gets the current stock for a product from Redis
      */
     public long getStock(String productId) {
-        Object value = redisTemplate.opsForValue().get(getStockKey(productId));
+        Object value = redisTemplate.opsForValue().get(java.util.Objects.requireNonNull(getStockKey(productId)));
         if (value == null) {
             return 0L;
         }
@@ -35,7 +35,7 @@ public class RedisStockService implements IRedisStockService {
      * Sets the stock for a product (used during sync from DB)
      */
     public void setStock(String productId, long quantity) {
-        String key = getStockKey(productId);
+        String key = java.util.Objects.requireNonNull(getStockKey(productId));
         redisTemplate.opsForValue().set(key, quantity);
         log.info("Redis stock set: productId={}, quantity={}", productId, quantity);
     }
@@ -50,7 +50,7 @@ public class RedisStockService implements IRedisStockService {
             throw new IllegalArgumentException("Quantity must be positive");
         }
         
-        String key = getStockKey(productId);
+        String key = java.util.Objects.requireNonNull(getStockKey(productId));
         long currentStock = getStock(productId);
         
         if (currentStock < quantity) {
@@ -75,7 +75,7 @@ public class RedisStockService implements IRedisStockService {
             throw new IllegalArgumentException("Quantity must be positive");
         }
         
-        String key = getStockKey(productId);
+        String key = java.util.Objects.requireNonNull(getStockKey(productId));
         Long newStock = redisTemplate.opsForValue().increment(key, quantity);
         log.info("Stock incremented (rollback): productId={}, quantity={}, newStock={}", 
                 productId, quantity, newStock);
@@ -94,12 +94,12 @@ public class RedisStockService implements IRedisStockService {
      * Returns lock token if successful, null otherwise
      */
     public String acquireLock(String productId) {
-        String lockKey = getLockKey(productId);
+        String lockKey = java.util.Objects.requireNonNull(getLockKey(productId));
         String lockToken = System.nanoTime() + "";
         
         Boolean acquired = redisTemplate.opsForValue()
                 .setIfAbsent(lockKey, lockToken, 
-                        java.time.Duration.ofSeconds(LOCK_TIMEOUT_SECONDS));
+                        java.util.Objects.requireNonNull(java.time.Duration.ofSeconds(LOCK_TIMEOUT_SECONDS)));
         
         if (acquired != null && acquired) {
             log.debug("Lock acquired: productId={}, token={}", productId, lockToken);
@@ -113,7 +113,7 @@ public class RedisStockService implements IRedisStockService {
      * Releases a distributed lock for a product
      */
     public void releaseLock(String productId, String lockToken) {
-        String lockKey = getLockKey(productId);
+        String lockKey = java.util.Objects.requireNonNull(getLockKey(productId));
         Object currentToken = redisTemplate.opsForValue().get(lockKey);
         
         if (currentToken != null && currentToken.toString().equals(lockToken)) {
@@ -126,15 +126,15 @@ public class RedisStockService implements IRedisStockService {
      * Checks if lock is held (for debugging)
      */
     public boolean isLocked(String productId) {
-        String lockKey = getLockKey(productId);
-        return redisTemplate.hasKey(lockKey);
+        String lockKey = java.util.Objects.requireNonNull(getLockKey(productId));
+        return Boolean.TRUE.equals(redisTemplate.hasKey(lockKey));
     }
     
     /**
      * Deletes stock key (use with caution, typically in tests)
      */
     public void deleteStock(String productId) {
-        redisTemplate.delete(getStockKey(productId));
+        redisTemplate.delete(java.util.Objects.requireNonNull(getStockKey(productId)));
     }
     
     /**

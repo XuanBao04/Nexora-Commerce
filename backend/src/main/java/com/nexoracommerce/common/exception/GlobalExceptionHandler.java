@@ -33,7 +33,7 @@ public class GlobalExceptionHandler {
                 .message(ex.getMessage())
                 .build();
                 
-        return ResponseEntity.status(ex.getStatus()).body(response);
+        return ResponseEntity.status(java.util.Objects.requireNonNull(ex.getStatus())).body(response);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

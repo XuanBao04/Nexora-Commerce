@@ -67,4 +67,32 @@ export const inventoryService = {
       return stock >= requiredQuantity;
     }
   },
+
+  /**
+   * Reserve stock for an order
+   * POST /v1/inventories/{productId}/stock-reservations
+   */
+  async reserveStock(
+    productId: string,
+    quantity: number,
+  ): Promise<void> {
+    await apiClient.post<ApiResponse<void>>(
+      `${INVENTORY_API}/${productId}/stock-reservations`,
+      { quantity },
+    );
+  },
+
+  /**
+   * Release reserved stock
+   * POST /v1/inventories/{productId}/stock-releases
+   */
+  async releaseStock(
+    productId: string,
+    quantity: number,
+  ): Promise<void> {
+    await apiClient.post<ApiResponse<void>>(
+      `${INVENTORY_API}/${productId}/stock-releases`,
+      { quantity },
+    );
+  },
 };

@@ -1,14 +1,17 @@
 import { useEffect, useState } from "react";
-import { orderService } from "../services/orderService";
+import { adminApiService } from "@/features/admin/services/adminApiService";
+import { useAdminPagination } from "@/features/admin/hooks/useAdminPagination";
+import { AdminPagination } from "@/features/admin/components/AdminPagination";
 import { inventoryService } from "@/features/inventory/services/inventoryService";
 import { productService } from "@/features/products/services/productService";
 import { OrderResponse } from "../types/order";
 import { formatPrice } from "@/features/cart/utils/priceCalculation";
-import { FaSync, FaChevronDown, FaCheck, FaTimes, FaCalendarAlt, FaClipboardList, FaUser, FaShieldAlt, FaExclamationTriangle, FaSearch } from "react-icons/fa";
+import { FaSync, FaChevronDown, FaCheck, FaTimes, FaCalendarAlt, FaClipboardList, FaUser, FaShieldAlt, FaExclamationTriangle, FaSearch} from "react-icons/fa";
 import { toast } from "react-toastify";
 
 const ORDER_STATUSES = [
   { value: "PENDING", label: "Chờ xác nhận", color: "bg-amber-50 text-amber-700 border-amber-200/40" },
+  { value: "CONFIRMED", label: "Đã xác nhận", color: "bg-cyan-50 text-cyan-700 border-cyan-200/40" },
   { value: "PROCESSING", label: "Đang xử lý", color: "bg-indigo-50 text-indigo-700 border-indigo-200/40" },
   { value: "SHIPPED", label: "Đã gửi", color: "bg-purple-50 text-purple-700 border-purple-200/40" },
   { value: "DELIVERED", label: "Đã giao", color: "bg-emerald-50 text-emerald-700 border-emerald-200/40" },
@@ -17,8 +20,7 @@ const ORDER_STATUSES = [
 
 const OrderManagement = () => {
   const [orders, setOrders] = useState<OrderResponse[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { page, size, pagination, setPage, updatePaginationData, isLoading, setIsLoading, error, setError } = useAdminPagination(10);
   const [statusFilter, setStatusFilter] = useState<string>("PENDING");
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
@@ -32,6 +34,9 @@ const OrderManagement = () => {
         const map: Record<string, { name: string; imageUrl?: string }> = {};
         products.forEach((p) => {
           map[p.id] = { name: p.name, imageUrl: p.imageUrl };
+          p.variants?.forEach((variant) => {
+            map[variant.sku] = { name: p.name, imageUrl: p.imageUrl };
+          });
         });
         setProductMap(map);
       } catch (err) {
@@ -45,8 +50,18 @@ const OrderManagement = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await orderService.getAllOrdersPaginated(0, 999, 'createdAt', searchQuery);
+      const response = await adminApiService.getAllOrders(page, size);
       setOrders(response.items);
+      if (response.pagination) {
+        updatePaginationData({
+          page: response.pagination.page,
+          size: response.pagination.pageSize,
+          totalElements: response.pagination.totalElements,
+          totalPages: response.pagination.totalPages,
+          hasNext: response.pagination.hasNext,
+          hasPrevious: response.pagination.hasPrevious,
+        });
+      }
     } catch (err) {
       setError((err as Error).message || "Không thể tải danh sách đơn hàng");
     } finally {
@@ -56,7 +71,7 @@ const OrderManagement = () => {
 
   useEffect(() => {
     fetchOrders();
-  }, []);
+  }, [page, size]);
 
   const handleUpdateStatus = async (orderId: string, newStatus: string) => {
     if (newStatus === 'CANCELLED') {
@@ -69,7 +84,7 @@ const OrderManagement = () => {
 
     setUpdatingOrderId(orderId);
     try {
-      const updatedOrder = await orderService.updateOrderStatus(orderId, newStatus);
+      const updatedOrder = await adminApiService.updateOrderStatus(orderId, newStatus);
       
       setOrders(orders.map(o => o.id === orderId ? updatedOrder : o));
       
@@ -77,7 +92,7 @@ const OrderManagement = () => {
         try {
           await Promise.all(
             updatedOrder.items.map(item =>
-              inventoryService.getInventoryDetails(item.productId)
+              inventoryService.getInventoryDetails(item.variantSku)
             )
           );
         } catch (err) {
@@ -114,7 +129,8 @@ const OrderManagement = () => {
 
   const getNextStatuses = (currentStatus: string): string[] => {
     const statusFlow: { [key: string]: string[] } = {
-      PENDING: ["PROCESSING", "CANCELLED"],
+      PENDING: ["CONFIRMED", "CANCELLED"],
+      CONFIRMED: ["PROCESSING", "CANCELLED"],
       PROCESSING: ["SHIPPED", "CANCELLED"],
       SHIPPED: ["DELIVERED"],
       DELIVERED: [],
@@ -162,6 +178,7 @@ const OrderManagement = () => {
         >
           <option value="ALL">Tất cả trạng thái</option>
           <option value="PENDING">Chờ xác nhận</option>
+          <option value="CONFIRMED">Đã xác nhận</option>
           <option value="PROCESSING">Đang xử lý</option>
           <option value="SHIPPED">Đã gửi</option>
           <option value="DELIVERED">Đã giao</option>
@@ -180,7 +197,7 @@ const OrderManagement = () => {
       </div>
 
       {/* Stats Summary Metrics Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
         <div className="bg-white/80 border border-zinc-200/40 p-4 rounded-2xl shadow-sm transition hover:shadow-md">
           <p className="text-zinc-400 text-[9px] font-black uppercase tracking-widest">Tất cả</p>
           <p className="text-xl font-black text-zinc-950 mt-1">{orders.length}</p>
@@ -189,6 +206,12 @@ const OrderManagement = () => {
           <p className="text-amber-500 text-[9px] font-black uppercase tracking-widest">Chờ xác nhận</p>
           <p className="text-xl font-black text-amber-600 mt-1">
             {orders.filter(o => o.status === "PENDING").length}
+          </p>
+        </div>
+        <div className="bg-white/80 border border-zinc-200/40 p-4 rounded-2xl shadow-sm transition hover:shadow-md">
+          <p className="text-cyan-500 text-[9px] font-black uppercase tracking-widest">Đã xác nhận</p>
+          <p className="text-xl font-black text-cyan-600 mt-1">
+            {orders.filter(o => o.status === "CONFIRMED").length}
           </p>
         </div>
         <div className="bg-white/80 border border-zinc-200/40 p-4 rounded-2xl shadow-sm transition hover:shadow-md">
@@ -316,14 +339,14 @@ const OrderManagement = () => {
                         </thead>
                         <tbody className="divide-y divide-zinc-100">
                            {order.items.map((item) => (
-                            <tr key={item.id} className="hover:bg-zinc-50/20 transition-colors">
+                            <tr key={item.id ?? item.variantSku} className="hover:bg-zinc-50/20 transition-colors">
                               <td className="py-3 px-4 font-bold text-zinc-800 flex items-center gap-3">
                                 {/* Small Product Image inside Table cell */}
                                 <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg border border-zinc-200/50 bg-zinc-50">
-                                  {productMap[item.productId]?.imageUrl ? (
+                                  {productMap[item.variantSku]?.imageUrl ? (
                                     <img
-                                      src={productMap[item.productId].imageUrl}
-                                      alt={productMap[item.productId].name || item.name}
+                                      src={productMap[item.variantSku].imageUrl}
+                                      alt={productMap[item.variantSku].name || item.productName}
                                       className="h-full w-full object-cover"
                                       onError={(e) => {
                                         e.currentTarget.style.display = "none";
@@ -334,15 +357,22 @@ const OrderManagement = () => {
                                   ) : null}
                                   <span
                                     className={`px-0.5 text-center text-[7px] font-bold uppercase tracking-wider text-zinc-400 ${
-                                      productMap[item.productId]?.imageUrl ? "hidden" : "block"
+                                      productMap[item.variantSku]?.imageUrl ? "hidden" : "block"
                                     }`}
                                   >
                                     No Img
                                   </span>
                                 </div>
-                                <span className="truncate max-w-[180px] sm:max-w-none">
-                                  {productMap[item.productId]?.name || item.name || item.productId}
-                                </span>
+                                <div className="min-w-0">
+                                  <span className="block truncate max-w-[180px] sm:max-w-none">
+                                    {productMap[item.variantSku]?.name || item.productName || item.variantSku}
+                                  </span>
+                                  {item.variantName && (
+                                    <span className="block text-[10px] font-semibold text-zinc-400">
+                                      {item.variantName}
+                                    </span>
+                                  )}
+                                </div>
                               </td>
                               <td className="py-3.5 px-4 text-center font-black text-zinc-600">{item.quantity}</td>
                               <td className="py-3.5 px-4 text-right font-bold text-zinc-500">{formatPrice(item.price)}</td>
@@ -424,9 +454,11 @@ const OrderManagement = () => {
           })}
         </div>
       )}
+
+      {/* Pagination Controls */}
+      <AdminPagination pagination={pagination} onPageChange={setPage} />
     </div>
   );
 };
 
 export default OrderManagement;
-

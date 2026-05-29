@@ -13,6 +13,8 @@ import com.nexoracommerce.user.repository.UserAddressRepository;
 import com.nexoracommerce.user.repository.UserRepository;
 import com.nexoracommerce.user.service.IUserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -180,5 +182,17 @@ public class UserServiceImpl implements IUserService {
                 userAddressRepository.save(newDefault);
             }
         }
+    }
+
+    @Override
+    public Page<UserProfileResponse> getAllUsers(String keyword, Pageable pageable) {
+        Page<User> userPage;
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            String search = keyword.trim();
+            userPage = userRepository.findByUsernameContainingIgnoreCaseOrEmailContainingIgnoreCase(search, search, pageable);
+        } else {
+            userPage = userRepository.findAll(pageable);
+        }
+        return userPage.map(userMapper::toProfileResponse);
     }
 }

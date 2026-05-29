@@ -61,7 +61,7 @@ public class RedisConfig {
 
     @Bean
     public RedisConnectionFactory redisConnectionFactory() {
-        RedisStandaloneConfiguration config = new RedisStandaloneConfiguration(host, port);
+        RedisStandaloneConfiguration config = new RedisStandaloneConfiguration(java.util.Objects.requireNonNull(host), port);
         config.setDatabase(database);
         if (password != null && !password.isBlank()) {
             config.setPassword(RedisPassword.of(password));
@@ -74,7 +74,7 @@ public class RedisConfig {
         poolConfig.setMaxWait(maxWait);
 
         LettucePoolingClientConfiguration.LettucePoolingClientConfigurationBuilder builder = LettucePoolingClientConfiguration.builder()
-                .commandTimeout(timeout)
+                .commandTimeout(java.util.Objects.requireNonNull(timeout))
                 .poolConfig(poolConfig);
 
         if (sslEnabled) {
@@ -120,12 +120,12 @@ public class RedisConfig {
         GenericJackson2JsonRedisSerializer valueSerializer = new GenericJackson2JsonRedisSerializer(mapper);
 
         RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig()
-                .entryTtl(Duration.ofMinutes(10))
+                .entryTtl(java.util.Objects.requireNonNull(Duration.ofMinutes(10)))
                 .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer()))
                 .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(valueSerializer))
                 .disableCachingNullValues();
 
-        return RedisCacheManager.builder(connectionFactory)
+        return RedisCacheManager.builder(java.util.Objects.requireNonNull(connectionFactory))
                 .cacheDefaults(config)
                 .build();
     }

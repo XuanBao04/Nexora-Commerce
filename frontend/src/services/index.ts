@@ -6,3 +6,4 @@ export {
   setAccessToken,
 } from './api/apiClient';
 export * from './api/responseInterceptor';
+export { checkoutService } from './checkoutService';

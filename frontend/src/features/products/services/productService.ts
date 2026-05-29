@@ -153,5 +153,23 @@ export const productService = {
     } catch {
       return 0;
     }
+  },
+
+  /**
+   * Get available stock count from API
+   * GET /v1/products/{productId}/stock
+   */
+  async getProductStock(productId: string): Promise<number> {
+    const response = await apiClient.get<ApiResponse<number>>(`${PRODUCT_API}/${productId}/stock`);
+    return response.data.data;
+  },
+
+  /**
+   * Check product availability status
+   * GET /v1/products/{productId}/availability
+   */
+  async isProductAvailable(productId: string): Promise<boolean> {
+    const response = await apiClient.get<ApiResponse<boolean>>(`${PRODUCT_API}/${productId}/availability`);
+    return response.data.data;
   }
 };

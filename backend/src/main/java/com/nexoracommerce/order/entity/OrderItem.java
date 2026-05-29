@@ -3,7 +3,9 @@ package com.nexoracommerce.order.entity;
 import com.nexoracommerce.product.entity.ProductVariant;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
@@ -22,7 +24,10 @@ import lombok.ToString;
 @Entity
 @Table(name = "order_items", indexes = {
     @Index(name = "idx_order_items_order", columnList = "order_id"),
-    @Index(name = "idx_order_items_variant", columnList = "variant_sku")
+    @Index(name = "idx_order_items_variant", columnList = "variant_sku"),
+    @Index(name = "idx_order_items_unique", columnList = "order_id,variant_sku")
+}, uniqueConstraints = {
+    @UniqueConstraint(name = "uq_order_items", columnNames = {"order_id", "variant_sku"})
 })
 public class OrderItem {
     @Id
@@ -39,6 +44,15 @@ public class OrderItem {
     @JoinColumn(name = "variant_sku", nullable = false)
     private ProductVariant variant;
 
+    @NotBlank(message = "Product name snapshot is required")
+    @Size(max = 255, message = "Product name must not exceed 255 characters")
+    @Column(name = "product_name", nullable = false, length = 255)
+    private String productName; // Snapshot of product name at checkout
+
+    @Size(max = 255, message = "Variant name must not exceed 255 characters")
+    @Column(name = "variant_name", length = 255)
+    private String variantName; // Snapshot of variant info (color, size, etc.) at checkout
+
     @NotNull(message = "Quantity is required")
     @Min(value = 1, message = "Quantity must be at least 1")
     @Column(nullable = false)
@@ -48,12 +62,4 @@ public class OrderItem {
     @Min(value = 0, message = "Price snapshot must be non-negative")
     @Column(nullable = false)
     private Long price; // Price snapshot at purchase time
-
-    @Transient
-    private String productId;
-
-    @Transient
-    public String getProductId() {
-        return variant != null ? variant.getSku() : null;
-    }
 }
