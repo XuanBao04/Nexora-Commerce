@@ -50,7 +50,7 @@ public class AdminProductController {
             pageable = PageRequest.of(pageable.getPageNumber(), 100, pageable.getSort());
         }
 
-        Page<ProductResponse> productPage = productService.getProductsWithFilters(keyword, categoryId, brandId, minPrice, maxPrice, pageable);
+        Page<ProductResponse> productPage = productService.getProductsWithFilters(keyword, categoryId, brandId, minPrice, maxPrice, null, pageable);
         
         return ResponseEntity.ok(
                 ApiResponse.okWithPagination(

@@ -3,9 +3,11 @@ package com.nexoracommerce.order.dto.request;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import com.nexoracommerce.common.validator.ValidPhoneNumber;
 import com.nexoracommerce.common.validator.ValidAddress;
+import com.nexoracommerce.order.enums.PaymentMethod;
 import java.util.List;
 
 /**
@@ -32,5 +34,8 @@ public record OrderRequest(
     String phoneNumber,
     
     @Size(max = 500, message = "Customer note must not exceed 500 characters")
-    String customerNote               // Optional: Customer notes at checkout
+    String customerNote,              // Optional: Customer notes at checkout
+    
+    @NotNull(message = "Payment method is required")
+    PaymentMethod paymentMethod       // Payment method: COD, VNPAY, MOMO
 ) {}

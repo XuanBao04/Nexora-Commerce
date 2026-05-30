@@ -8,6 +8,7 @@ import { OrderResponse, OrderPreviewResponse, OrderRequest } from '../types/orde
 import { PaginationInfo, ApiResponse } from '@/types/apiResponse';
 
 const ORDER_API = '/v1/orders';
+const CHECKOUT_API = '/v1/checkouts';
 const ADMIN_ORDER_API = '/v1/admin/orders';
 
 export interface PaginatedOrdersResponse {
@@ -23,6 +24,18 @@ export const orderService = {
   async createOrder(_userId: string, orderRequest: OrderRequest): Promise<OrderResponse> {
     const response = await apiClient.post<ApiResponse<OrderResponse>>(
       `${ORDER_API}`,
+      orderRequest
+    );
+    return response.data.data;
+  },
+
+  /**
+   * Secure Checkout
+   * Process checkout with Redis protection and generates payment URLs
+   */
+  async checkout(orderRequest: OrderRequest): Promise<OrderResponse> {
+    const response = await apiClient.post<ApiResponse<OrderResponse>>(
+      `${CHECKOUT_API}`,
       orderRequest
     );
     return response.data.data;

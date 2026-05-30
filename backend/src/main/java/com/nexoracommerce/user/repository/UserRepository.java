@@ -21,5 +21,8 @@ public interface UserRepository extends BaseRepository<User, UUID> {
     Boolean existsByEmail(String email);
     
     Page<User> findByUsernameContainingIgnoreCaseOrEmailContainingIgnoreCase(String username, String email, Pageable pageable);
+
+    @org.springframework.data.jpa.repository.Query("SELECT COUNT(u) FROM User u JOIN u.roles r WHERE r.name = 'ROLE_CUSTOMER'")
+    long countCustomers();
 }
 

@@ -4,7 +4,7 @@ import { productService } from "@/features/products/services/productService";
 import { OrderResponse } from "../types/order";
 import PriceBreakdown from "@/features/cart/components/PriceBreakdown";
 import { formatPrice } from "@/features/cart/utils/priceCalculation";
-import { FaChevronLeft, FaChevronRight, FaChevronDown, FaClipboardList, FaRegCalendarAlt, FaShippingFast, FaCheckCircle, FaExclamationTriangle, FaTimes } from "react-icons/fa";
+import { FaChevronLeft, FaChevronRight, FaChevronDown, FaClipboardList, FaRegCalendarAlt, FaShippingFast, FaCheckCircle, FaExclamationTriangle, FaTimes, FaCreditCard, FaCheckSquare, FaTimesCircle } from "react-icons/fa";
 
 const getStatusBadgeClass = (status: OrderResponse["status"]) => {
   switch (status) {
@@ -39,6 +39,32 @@ const getStatusLabel = (status: OrderResponse["status"]) => {
       return "Đã giao thành công";
     case "CANCELLED":
       return "Đã hủy đơn";
+    default:
+      return status;
+  }
+};
+
+const getPaymentStatusBadgeClass = (status: OrderResponse["paymentStatus"]) => {
+  switch (status) {
+    case "PAID":
+      return "bg-emerald-50 text-emerald-700 border-emerald-200/40";
+    case "UNPAID":
+      return "bg-amber-50 text-amber-700 border-amber-200/40";
+    case "REFUNDED":
+      return "bg-rose-50 text-rose-700 border-rose-200/40";
+    default:
+      return "bg-zinc-50 text-zinc-500 border-zinc-200/50";
+  }
+};
+
+const getPaymentStatusLabel = (status: OrderResponse["paymentStatus"]) => {
+  switch (status) {
+    case "PAID":
+      return "Đã thanh toán";
+    case "UNPAID":
+      return "Chưa thanh toán";
+    case "REFUNDED":
+      return "Đã hoàn tiền";
     default:
       return status;
   }
@@ -257,14 +283,24 @@ export default function Order() {
                     <p className="text-base font-black text-zinc-950 sm:text-lg">
                       {formatPrice(order.totalPrice)}
                     </p>
-                    <span
-                      className={`badge text-[9px] uppercase tracking-widest font-black ${getStatusBadgeClass(
-                        order.status
-                      )}`}
-                    >
-                      {getStatusLabel(order.status)}
-                      <span className="sr-only">{order.status}</span>
-                    </span>
+                    <div className="flex gap-2 flex-wrap justify-end">
+                      <span
+                        className={`badge text-[9px] uppercase tracking-widest font-black ${getStatusBadgeClass(
+                          order.status
+                        )}`}
+                      >
+                        {getStatusLabel(order.status)}
+                        <span className="sr-only">{order.status}</span>
+                      </span>
+                      <span
+                        className={`badge text-[9px] uppercase tracking-widest font-black ${getPaymentStatusBadgeClass(
+                          order.paymentStatus
+                        )}`}
+                      >
+                        {getPaymentStatusLabel(order.paymentStatus)}
+                        <span className="sr-only">{order.paymentStatus}</span>
+                      </span>
+                    </div>
                   </div>
 
                   <div className={`text-zinc-400 transition-transform duration-300 ${isExpanded ? 'rotate-180 text-zinc-950' : ''}`}>
@@ -429,6 +465,76 @@ export default function Order() {
                       compact={true}
                     />
                   </div>
+
+                  {/* Payment Transaction History */}
+                  {order.paymentTransactions && order.paymentTransactions.length > 0 && (
+                    <div className="surface overflow-hidden bg-white/60">
+                      <div className="border-b border-zinc-100 p-4 bg-zinc-50/50">
+                        <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1.5">
+                          <FaCreditCard className="h-3.5 w-3.5" />
+                          <span>Lịch sử giao dịch thanh toán</span>
+                        </h3>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs">
+                          <thead className="bg-zinc-50/80 border-b border-zinc-100">
+                            <tr>
+                              <th className="px-4 py-3 text-left font-bold text-zinc-600 uppercase tracking-widest">Thời gian</th>
+                              <th className="px-4 py-3 text-left font-bold text-zinc-600 uppercase tracking-widest">Phương thức</th>
+                              <th className="px-4 py-3 text-left font-bold text-zinc-600 uppercase tracking-widest">Mã giao dịch</th>
+                              <th className="px-4 py-3 text-left font-bold text-zinc-600 uppercase tracking-widest">Số tiền</th>
+                              <th className="px-4 py-3 text-center font-bold text-zinc-600 uppercase tracking-widest">Trạng thái</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-zinc-100">
+                            {order.paymentTransactions.map((transaction) => (
+                              <tr key={transaction.id} className="hover:bg-zinc-50/50 transition">
+                                <td className="px-4 py-3 text-zinc-700 font-semibold">
+                                  {new Date(transaction.createdAt).toLocaleDateString("vi-VN", {
+                                    year: "numeric",
+                                    month: "2-digit",
+                                    day: "2-digit",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                                </td>
+                                <td className="px-4 py-3 text-zinc-700 font-semibold">
+                                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-zinc-100 text-zinc-600 font-bold text-[9px] uppercase tracking-widest">
+                                    {transaction.paymentMethod}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-zinc-600 font-mono text-[10px]">
+                                  {transaction.providerTransactionId || "—"}
+                                </td>
+                                <td className="px-4 py-3 text-zinc-950 font-extrabold">
+                                  {formatPrice(transaction.amount)}
+                                </td>
+                                <td className="px-4 py-3 text-center">
+                                  {transaction.status === 'SUCCESS' && (
+                                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 font-bold text-[9px] uppercase tracking-widest border border-emerald-200/50">
+                                      <FaCheckSquare className="h-3 w-3" />
+                                      Thành công
+                                    </span>
+                                  )}
+                                  {transaction.status === 'FAILED' && (
+                                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-rose-50 text-rose-700 font-bold text-[9px] uppercase tracking-widest border border-rose-200/50">
+                                      <FaTimesCircle className="h-3 w-3" />
+                                      Thất bại
+                                    </span>
+                                  )}
+                                  {transaction.status === 'PENDING' && (
+                                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-50 text-amber-700 font-bold text-[9px] uppercase tracking-widest border border-amber-200/50">
+                                      Đang xử lý
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Actions Bar */}
                   <div className="flex justify-end gap-2 border-t border-zinc-100 pt-5">

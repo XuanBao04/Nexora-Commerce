@@ -28,6 +28,16 @@ export interface OrderRequest extends ShippingAddress {
   userId: string;
   orderItems: OrderItemRequest[];
   couponCode?: string;
+  paymentMethod: 'COD' | 'VNPAY' | 'MOMO';
+}
+
+export interface PaymentTransactionResponse {
+  id: number;
+  amount: number;
+  paymentMethod: 'COD' | 'VNPAY' | 'MOMO';
+  providerTransactionId: string | null;
+  status: 'PENDING' | 'SUCCESS' | 'FAILED';
+  createdAt: string;
 }
 
 export interface OrderResponse extends ShippingAddress {
@@ -35,6 +45,7 @@ export interface OrderResponse extends ShippingAddress {
   userId: string;
   items: OrderItemResponse[];
   status: 'PENDING' | 'CONFIRMED' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED';
+  paymentStatus: 'UNPAID' | 'PAID' | 'REFUNDED';
   createdAt: string;
   lastModifiedDate: string;
   subtotal: number;
@@ -42,6 +53,8 @@ export interface OrderResponse extends ShippingAddress {
   couponCode?: string;
   totalPrice: number;
   shippingFee: number;
+  paymentUrl?: string | null;
+  paymentTransactions: PaymentTransactionResponse[];
 }
 
 export interface OrderPreviewResponse {

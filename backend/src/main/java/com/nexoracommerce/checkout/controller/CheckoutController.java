@@ -21,6 +21,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * REST Controller for checkout and payment processing operations
@@ -56,8 +57,15 @@ public class CheckoutController {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "Checkout conflict - inventory already reserved or order exists")
     })
     public ResponseEntity<ApiResponse<OrderResponse>> checkout(
-            @Valid @RequestBody OrderRequest request) {
-        OrderResponse order = checkoutService.checkoutWithRedisProtection(request, request.userId());
+            @Valid @RequestBody OrderRequest request,
+            HttpServletRequest httpServletRequest) {
+        
+        String ipAddress = httpServletRequest.getHeader("X-Forwarded-For");
+        if (ipAddress == null || ipAddress.isEmpty() || "unknown".equalsIgnoreCase(ipAddress)) {
+            ipAddress = httpServletRequest.getRemoteAddr();
+        }
+        
+        OrderResponse order = checkoutService.checkoutWithRedisProtection(request, request.userId(), ipAddress);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(order));
     }
 
@@ -86,7 +94,7 @@ public class CheckoutController {
             @Parameter(description = "The order ID to process payment for", example = "ORD-001")
             @PathVariable String orderId,
             @Valid @RequestBody PaymentRequest paymentRequest) {
-        PaymentResponse response = checkoutService.processPayment(orderId, paymentRequest.successful());
+        PaymentResponse response = checkoutService.processPayment(orderId, paymentRequest.successful(), null, null, null);
         return ResponseEntity.ok(ApiResponse.ok(response, response.message()));
     }
 }

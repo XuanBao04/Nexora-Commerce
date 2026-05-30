@@ -26,5 +26,11 @@ public record OrderResponse(
     
     // Shipping address fields
     String shippingAddress,
-    String phoneNumber
+    String phoneNumber,
+    
+    // Payment gateway redirect URL (if applicable)
+    String paymentUrl,
+    
+    // Payment transaction history
+    List<PaymentTransactionResponse> paymentTransactions
 ) {}

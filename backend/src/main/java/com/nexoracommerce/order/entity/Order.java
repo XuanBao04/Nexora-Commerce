@@ -38,7 +38,8 @@ import java.util.Set;
 @Table(name = "orders", indexes = {
     @Index(name = "idx_orders_user", columnList = "user_id"),
     @Index(name = "idx_orders_status", columnList = "status"),
-    @Index(name = "idx_orders_payment_status", columnList = "payment_status")
+    @Index(name = "idx_orders_payment_status", columnList = "payment_status"),
+    @Index(name = "idx_orders_created_at", columnList = "created_at")
 })
 @EntityListeners(AuditingEntityListener.class)
 public class Order {

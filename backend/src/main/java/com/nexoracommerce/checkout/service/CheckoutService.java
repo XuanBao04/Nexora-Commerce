@@ -7,10 +7,17 @@ import com.nexoracommerce.checkout.dto.PaymentResponse;
 import com.nexoracommerce.order.dto.request.OrderRequest;
 import com.nexoracommerce.order.dto.response.OrderResponse;
 import com.nexoracommerce.order.entity.Order;
+import com.nexoracommerce.order.entity.PaymentTransaction;
+import com.nexoracommerce.order.enums.PaymentMethod;
+import com.nexoracommerce.order.enums.TransactionStatus;
 import com.nexoracommerce.order.repository.OrderRepository;
+import com.nexoracommerce.order.repository.PaymentTransactionRepository;
 import com.nexoracommerce.order.service.IOrderService;
 import com.nexoracommerce.payment.service.PaymentRollbackService;
+import com.nexoracommerce.payment.service.VnPayService;
 import com.nexoracommerce.redis.service.RedisStockService;
+import com.nexoracommerce.order.enums.PaymentMethod;
+import com.nexoracommerce.order.enums.PaymentStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -32,10 +39,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class CheckoutService implements ICheckoutService {
 
     private final IOrderService orderService;
+    private final PaymentTransactionRepository paymentTransactionRepository;
     private final RedisStockService redisStockService;
     private final PaymentRollbackService paymentRollbackService;
     private final OrderRepository orderRepository;
-    
+    private final VnPayService vnPayService;
     /**
      * Checkout flow with Redis stock protection:
      * 1. Verify Redis stock available
@@ -45,7 +53,7 @@ public class CheckoutService implements ICheckoutService {
      */
     @Transactional
     @Override
-    public OrderResponse checkoutWithRedisProtection(OrderRequest request, String userId) {
+    public OrderResponse checkoutWithRedisProtection(OrderRequest request, String userId, String ipAddress) {
         log.info("Starting checkout with Redis protection: userId={}, itemsCount={}", 
                 userId, request.orderItems().size());
         
@@ -75,6 +83,34 @@ public class CheckoutService implements ICheckoutService {
             log.info("Order created successfully: orderId={}, userId={}", 
                     orderResponse.id(), userId);
             
+            // 4. Generate Payment URL if needed
+            String paymentUrl = null;
+            if (request.paymentMethod() == PaymentMethod.VNPAY) {
+                paymentUrl = vnPayService.generatePaymentUrl(orderResponse, ipAddress);
+            }
+            
+            if (paymentUrl != null) {
+                return new OrderResponse(
+                        orderResponse.id(),
+                        orderResponse.userId(),
+                        orderResponse.items(),
+                        orderResponse.subtotal(),
+                        orderResponse.discountAmount(),
+                        orderResponse.shippingFee(),
+                        orderResponse.totalPrice(),
+                        orderResponse.couponCode(),
+                        orderResponse.status(),
+                        orderResponse.paymentStatus(),
+                        orderResponse.customerNote(),
+                        orderResponse.createdAt(),
+                        orderResponse.lastModifiedDate(),
+                        orderResponse.shippingAddress(),
+                        orderResponse.phoneNumber(),
+                        paymentUrl,
+                        orderResponse.paymentTransactions()
+                );
+            }
+            
             return orderResponse;
             
         } catch (Exception e) {
@@ -102,7 +138,7 @@ public class CheckoutService implements ICheckoutService {
      */
     @Transactional
     @Override
-    public PaymentResponse processPayment(String orderId, boolean paymentSuccessful) {
+    public PaymentResponse processPayment(String orderId, boolean paymentSuccessful, String providerTransactionId, Long amount, PaymentMethod paymentMethod) {
         log.info("Processing payment for order: orderId={}, success={}", 
                 orderId, paymentSuccessful);
         
@@ -113,9 +149,20 @@ public class CheckoutService implements ICheckoutService {
             throw new BusinessLogicException("Order is not in PENDING status: " + orderId);
         }
         
+        PaymentTransaction transaction = PaymentTransaction.builder()
+                .order(order)
+                .paymentMethod(paymentMethod != null ? paymentMethod : PaymentMethod.VNPAY)
+                .amount(amount != null ? amount : order.getTotalPrice())
+                .providerTransactionId(providerTransactionId)
+                .status(paymentSuccessful ? TransactionStatus.SUCCESS : TransactionStatus.FAILED)
+                .build();
+        
+        paymentTransactionRepository.save(transaction);
+        
         if (paymentSuccessful) {
             // Payment succeeded - transition order to confirmed
             order.setStatus(OrderStatus.CONFIRMED);
+            order.setPaymentStatus(PaymentStatus.PAID);
             orderRepository.save(order);
             log.info("Payment confirmed for order: orderId={}", orderId);
             return new PaymentResponse(
@@ -130,6 +177,7 @@ public class CheckoutService implements ICheckoutService {
             
             // Mark order as cancelled
             order.setStatus(OrderStatus.CANCELLED);
+            order.setPaymentStatus(PaymentStatus.UNPAID);
             orderRepository.save(order);
             log.info("Order cancelled due to payment failure: orderId={}", orderId);
             return new PaymentResponse(

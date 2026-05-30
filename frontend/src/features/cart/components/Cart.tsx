@@ -3,16 +3,9 @@ import { useCartStore } from "@/store/useCartStore";
 import CartItem from "./CartItem";
 import CouponInput from "./CouponInput";
 import PriceBreakdown from "./PriceBreakdown";
-import AddressForm from "./AddressForm";
-import { orderService } from "@/features/orders/services/orderService";
-import { inventoryService } from "@/features/inventory/services/inventoryService";
-import { Navigate } from "react-router-dom";
-import { OrderItemRequest, OrderRequest, ShippingAddress } from "@/features/orders/types/order";
-import { productService } from "@/features/products/services/productService";
-import { CartItemResponse } from "@/features/cart/types/cart";
 import { Product } from "@/features/products/types/product";
-import { toast } from "react-toastify";
-import { FaArrowLeft, FaLock, FaShoppingCart } from "react-icons/fa";
+import { FaArrowLeft, FaShoppingCart, FaCreditCard } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
 
 const SHIPPING_FEE = 29900;
 
@@ -24,43 +17,7 @@ type OrderPreview = {
   couponCode: string | null;
 };
 
-const getVariantName = (product: Product, variantSku: string): string => {
-  const variant = product.variants?.find((item) => item.sku === variantSku);
-  if (!variant?.attributes?.length) {
-    return "Default";
-  }
-
-  return variant.attributes
-    .map((attribute) => `${attribute.name}: ${attribute.value}`)
-    .join(", ");
-};
-
-const buildOrderItemRequest = async (
-  item: CartItemResponse,
-): Promise<OrderItemRequest> => {
-  try {
-    const product = await productService.getProductById(item.productId);
-
-    return {
-      variantSku: item.productId,
-      productName: product.name || item.productId,
-      variantName: getVariantName(product, item.productId),
-      quantity: item.quantity,
-      price: item.price,
-    };
-  } catch {
-    return {
-      variantSku: item.productId,
-      productName: item.productId,
-      variantName: "Default",
-      quantity: item.quantity,
-      price: item.price,
-    };
-  }
-};
-
 const Cart = () => {
-  const userId = localStorage.getItem("userId") || "";
   const { cart, isLoading, error, fetchCart, removeItem, updateItem, clear } =
     useCartStore();
 
@@ -69,15 +26,7 @@ const Cart = () => {
   const [orderPreview, setOrderPreview] = useState<OrderPreview | null>(
     null
   );
-  const [shippingAddress, setShippingAddress] = useState<ShippingAddress>({
-    shippingAddress: "",
-    city: "",
-    district: "",
-    ward: "",
-    postalCode: "",
-    phoneNumber: "",
-  });
-  const [addressErrors, setAddressErrors] = useState<Partial<ShippingAddress>>({});
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchCart();
@@ -100,90 +49,9 @@ const Cart = () => {
     }
   }, [cart, discountAmount, couponCode]);
 
-  const handleRedirectToOrders = async () => {
-    try {
-      if (!cart || cart.items.length === 0) {
-        toast.error("Giỏ hàng trống. Vui lòng thêm sản phẩm vào giỏ hàng.");
-        return <Navigate to="/authenticated/products" />;
-      }
-
-      const errors: Partial<ShippingAddress> = {};
-      
-      const trimmedShippingAddress = shippingAddress.shippingAddress.trim();
-      if (!trimmedShippingAddress) {
-        errors.shippingAddress = "Vui lòng nhập địa chỉ giao hàng";
-      } else if (trimmedShippingAddress.length < 5 || trimmedShippingAddress.length > 255) {
-        errors.shippingAddress = "Địa chỉ giao hàng phải từ 5 đến 255 ký tự";
-      }
-      
-      const trimmedCity = shippingAddress.city.trim();
-      if (!trimmedCity) {
-        errors.city = "Vui lòng nhập Tỉnh / Thành phố";
-      } else if (trimmedCity.length < 2 || trimmedCity.length > 100) {
-        errors.city = "Tỉnh / Thành phố phải từ 2 đến 100 ký tự";
-      }
-      
-      const trimmedDistrict = shippingAddress.district.trim();
-      if (!trimmedDistrict) {
-        errors.district = "Vui lòng nhập Quận / Huyện";
-      } else if (trimmedDistrict.length < 2 || trimmedDistrict.length > 100) {
-        errors.district = "Quận / Huyện phải từ 2 đến 100 ký tự";
-      }
-      
-      const trimmedWard = shippingAddress.ward.trim();
-      if (!trimmedWard) {
-        errors.ward = "Vui lòng nhập Phường / Xã";
-      } else if (trimmedWard.length < 2 || trimmedWard.length > 100) {
-        errors.ward = "Phường / Xã phải từ 2 đến 100 ký tự";
-      }
-      
-      const trimmedPhone = shippingAddress.phoneNumber.trim();
-      if (!trimmedPhone) {
-        errors.phoneNumber = "Vui lòng nhập số điện thoại";
-      } else if (!/^0\d{9}$/.test(trimmedPhone)) {
-        errors.phoneNumber = "Số điện thoại không hợp lệ (phải gồm 10 chữ số và bắt đầu bằng số 0)";
-      }
-
-      if (Object.keys(errors).length > 0) {
-        setAddressErrors(errors);
-        toast.error("Vui lòng điền đầy đủ thông tin giao hàng.");
-        return;
-      }
-
-      const orderItems = await Promise.all(
-        cart.items.map((item) => buildOrderItemRequest(item)),
-      );
-
-      const orderRequest: OrderRequest = {
-        userId,
-        orderItems,
-        couponCode: couponCode ?? undefined,
-        ...shippingAddress,
-      };
-
-      const stockChecks = await Promise.all(
-        cart.items.map((item) =>
-          inventoryService.checkStock(item.productId, item.quantity),
-        ),
-      );
-
-      if (stockChecks.some((isAvailable) => !isAvailable)) {
-        toast.error(
-          "Một hoặc nhiều sản phẩm không còn đủ tồn kho. Vui lòng cập nhật giỏ hàng.",
-        );
-        return;
-      }
-
-      await orderService.createOrder(userId, orderRequest);
-      await clear();
-      window.location.href = "/authenticated/orders";
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Không xác định được lỗi.";
-      toast.error(`Đã xảy ra lỗi khi tạo đơn hàng: ${message}`);
-    }
+  const handleRedirectToCheckout = () => {
+    navigate("/authenticated/checkout");
   };
-
 
 
   if (isLoading) {
@@ -270,11 +138,7 @@ const Cart = () => {
             </div>
           </section>
 
-          <AddressForm
-            onAddressChange={setShippingAddress}
-            errors={addressErrors}
-            setErrors={setAddressErrors}
-          />
+          {/* Removed AddressForm */}
         </div>
 
         {/* Right receipts column and Actions */}
@@ -303,11 +167,11 @@ const Cart = () => {
           <div className="surface p-6 space-y-4">
             <button
               className="btn-primary w-full h-12 rounded-xl text-xs font-bold uppercase tracking-widest"
-              onClick={handleRedirectToOrders}
+              onClick={handleRedirectToCheckout}
               data-testid="checkout-btn"
             >
-              <FaLock className="h-3 w-3 text-amber-200" />
-              Thanh toán ngay
+              <FaCreditCard className="h-3 w-3 text-amber-200" />
+              Tiến hành thanh toán
             </button>
             <button
               onClick={clear}

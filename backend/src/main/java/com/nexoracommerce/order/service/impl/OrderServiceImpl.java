@@ -14,6 +14,8 @@ import com.nexoracommerce.common.enums.OrderStatus;
 import com.nexoracommerce.common.exception.ResourceNotFoundException;
 import com.nexoracommerce.common.exception.BusinessLogicException;
 import com.nexoracommerce.order.enums.PaymentStatus;
+import com.nexoracommerce.order.enums.TransactionStatus;
+import com.nexoracommerce.order.entity.PaymentTransaction;
 import com.nexoracommerce.order.mapper.OrderMapper;
 import com.nexoracommerce.order.repository.OrderRepository;
 import com.nexoracommerce.order.service.IOrderService;
@@ -127,15 +129,25 @@ public class OrderServiceImpl implements IOrderService {
                 order.getOrderItems().add(orderItem);
             }
             
-            // 7. Save order only after all validations and reservations succeed
+            // 7. Record payment transaction
+            PaymentTransaction transaction = PaymentTransaction.builder()
+                    .order(order)
+                    .paymentMethod(request.paymentMethod())
+                    .amount(totalPrice)
+                    .status(TransactionStatus.PENDING)
+                    .createdAt(now)
+                    .build();
+            order.getPaymentTransactions().add(transaction);
+            
+            // 8. Save order only after all validations and reservations succeed
             Order savedOrder = orderRepository.save(java.util.Objects.requireNonNull(order));
             
-            // 8. Record initial status change in history
+            // 9. Record initial status change in history
             orderStatusHistoryService.recordStatusChange(
                 orderId, 
                 OrderStatus.PENDING.toString(), 
                 "SYSTEM", 
-                "Order created"
+                "Order created with payment method: " + request.paymentMethod()
             );
             
             return orderMapper.toOrderResponse(savedOrder);

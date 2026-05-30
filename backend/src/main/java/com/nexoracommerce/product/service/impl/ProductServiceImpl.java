@@ -68,7 +68,16 @@ public class ProductServiceImpl implements IProductService {
     @Override
     @Cacheable(value = "products", key = "#productId")
     public ProductResponse getProductById(String productId) {
-        return productMapper.toProductResponse(getProductEntityById(productId));
+        Product product = getProductEntityById(productId);
+        if (product.getStatus() == com.nexoracommerce.common.enums.ProductStatus.INACTIVE) {
+            org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+            boolean isAdmin = auth != null && auth.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+            if (!isAdmin) {
+                throw new ResourceNotFoundException("Sản phẩm đã bị khóa hoặc không tồn tại.");
+            }
+        }
+        return productMapper.toProductResponse(product);
     }
 
     @Override
@@ -84,8 +93,8 @@ public class ProductServiceImpl implements IProductService {
     }
 
     @Override
-    public Page<ProductResponse> getProductsWithFilters(String keyword, Long categoryId, Long brandId, Long minPrice, Long maxPrice, Pageable pageable) {
-        return productRepository.findProductsWithFilters(keyword, categoryId, brandId, minPrice, maxPrice, pageable)
+    public Page<ProductResponse> getProductsWithFilters(String keyword, Long categoryId, Long brandId, Long minPrice, Long maxPrice, com.nexoracommerce.common.enums.ProductStatus status, Pageable pageable) {
+        return productRepository.findProductsWithFilters(keyword, categoryId, brandId, minPrice, maxPrice, status, pageable)
                 .map(productMapper::toProductResponse);
     }
 

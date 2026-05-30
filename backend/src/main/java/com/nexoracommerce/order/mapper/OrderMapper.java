@@ -3,9 +3,11 @@ package com.nexoracommerce.order.mapper;
 import com.nexoracommerce.order.dto.response.OrderResponse;
 import com.nexoracommerce.order.dto.response.OrderItemResponse;
 import com.nexoracommerce.order.dto.response.OrderStatusHistoryResponse;
+import com.nexoracommerce.order.dto.response.PaymentTransactionResponse;
 import com.nexoracommerce.order.entity.Order;
 import com.nexoracommerce.order.entity.OrderItem;
 import com.nexoracommerce.order.entity.OrderStatusHistory;
+import com.nexoracommerce.order.entity.PaymentTransaction;
 import org.mapstruct.Mapper;
 import org.mapstruct.ReportingPolicy;
 
@@ -34,6 +36,12 @@ public interface OrderMapper {
                 .mapToLong(item -> item.price() * item.quantity())
                 .sum();
 
+        List<PaymentTransactionResponse> paymentTransactionResponses = order.getPaymentTransactions() != null
+                ? order.getPaymentTransactions().stream()
+                    .map(this::toPaymentTransactionResponse)
+                    .collect(Collectors.toList())
+                : java.util.Collections.emptyList();
+
         return new OrderResponse(
                 order.getId(),
                 order.getUser() != null ? order.getUser().getId().toString() : null,
@@ -45,11 +53,13 @@ public interface OrderMapper {
                 order.getCoupon() != null ? order.getCoupon().getCode() : null,
                 order.getStatus(),                          // OrderStatus enum
                 order.getPaymentStatus(),                   // PaymentStatus enum
-                order.getCustomerNote(),                    // NEW: Customer note
+                order.getCustomerNote(),                    // Customer note
                 order.getCreatedAt(),
                 order.getLastModifiedDate(),
                 order.getShippingAddress(),
-                order.getPhoneNumber()
+                order.getPhoneNumber(),
+                null,                                       // paymentUrl
+                paymentTransactionResponses                 // Payment transactions list
         );
     }
 
@@ -67,6 +77,23 @@ public interface OrderMapper {
                 item.getVariantName(),                      // Snapshot of variant info
                 item.getQuantity(),
                 item.getPrice()
+        );
+    }
+
+    /**
+     * Convert PaymentTransaction entity to PaymentTransactionResponse DTO
+     */
+    default PaymentTransactionResponse toPaymentTransactionResponse(PaymentTransaction transaction) {
+        if (transaction == null) {
+            return null;
+        }
+        return new PaymentTransactionResponse(
+                transaction.getId(),
+                transaction.getAmount(),
+                transaction.getPaymentMethod(),
+                transaction.getProviderTransactionId(),
+                transaction.getStatus(),
+                transaction.getCreatedAt()
         );
     }
 

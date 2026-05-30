@@ -64,11 +64,13 @@ public interface ProductRepository extends BaseRepository<Product, String> {
             "WHERE (:keyword IS NULL OR :keyword = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
             "AND (:categoryId IS NULL OR p.category.id = :categoryId) " +
             "AND (:brandId IS NULL OR p.brand.id = :brandId) " +
+            "AND (:status IS NULL OR p.status = :status) " +
             "AND EXISTS (SELECT v FROM ProductVariant v WHERE v.product = p AND (:minPrice IS NULL OR v.price >= :minPrice) AND (:maxPrice IS NULL OR v.price <= :maxPrice))",
            countQuery = "SELECT COUNT(p) FROM Product p " +
             "WHERE (:keyword IS NULL OR :keyword = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
             "AND (:categoryId IS NULL OR p.category.id = :categoryId) " +
             "AND (:brandId IS NULL OR p.brand.id = :brandId) " +
+            "AND (:status IS NULL OR p.status = :status) " +
             "AND EXISTS (SELECT v FROM ProductVariant v WHERE v.product = p AND (:minPrice IS NULL OR v.price >= :minPrice) AND (:maxPrice IS NULL OR v.price <= :maxPrice))")
     Page<Product> findProductsWithFilters(
             @Param("keyword") String keyword,
@@ -76,6 +78,7 @@ public interface ProductRepository extends BaseRepository<Product, String> {
             @Param("brandId") Long brandId,
             @Param("minPrice") Long minPrice,
             @Param("maxPrice") Long maxPrice,
+            @Param("status") com.nexoracommerce.common.enums.ProductStatus status,
             Pageable pageable);
 
     /**

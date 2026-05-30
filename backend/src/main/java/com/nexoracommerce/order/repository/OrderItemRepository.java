@@ -85,4 +85,15 @@ public interface OrderItemRepository extends BaseRepository<OrderItem, Long> {
      * Check if variant exists in a specific order
      */
     boolean existsByOrder_IdAndVariant_Sku(String orderId, String variantSku);
+
+    /**
+     * Find best selling products aggregated completely at database-level.
+     */
+    @Query("SELECT new com.nexoracommerce.statistic.dto.response.BestSellerItem(" +
+           "oi.productName, oi.variant.sku, CAST(SUM(oi.quantity) AS int), SUM(oi.quantity * oi.price)) " +
+           "FROM OrderItem oi " +
+           "WHERE oi.order.paymentStatus = 'PAID' " +
+           "GROUP BY oi.productName, oi.variant.sku " +
+           "ORDER BY SUM(oi.quantity) DESC")
+    List<com.nexoracommerce.statistic.dto.response.BestSellerItem> findBestSellers(org.springframework.data.domain.Pageable pageable);
 }

@@ -56,7 +56,7 @@ public interface IProductService {
      * @param pageable pagination parameters
      * @return Page of ProductResponse
      */
-    Page<ProductResponse> getProductsWithFilters(String keyword, Long categoryId, Long brandId, Long minPrice, Long maxPrice, Pageable pageable);
+    Page<ProductResponse> getProductsWithFilters(String keyword, Long categoryId, Long brandId, Long minPrice, Long maxPrice, com.nexoracommerce.common.enums.ProductStatus status, Pageable pageable);
 
     /**
      * Get available stock for a product

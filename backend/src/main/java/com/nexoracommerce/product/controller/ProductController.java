@@ -64,7 +64,7 @@ public class ProductController {
             pageable = PageRequest.of(pageable.getPageNumber(), 12, pageable.getSort());
         }
 
-        Page<ProductResponse> productPage = productService.getProductsWithFilters(keyword, categoryId, brandId, minPrice, maxPrice, pageable);
+        Page<ProductResponse> productPage = productService.getProductsWithFilters(keyword, categoryId, brandId, minPrice, maxPrice, com.nexoracommerce.common.enums.ProductStatus.ACTIVE, pageable);
         return ResponseEntity.ok(
                 ApiResponse.okWithPagination(
                         productPage.getContent(),

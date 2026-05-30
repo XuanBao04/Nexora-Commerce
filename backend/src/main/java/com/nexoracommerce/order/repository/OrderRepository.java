@@ -173,6 +173,28 @@ public interface OrderRepository extends BaseRepository<Order, String> {
     long getTotalRevenueByStatus(@Param("status") OrderStatus status);
 
     /**
+     * Total net revenue (sum of all paid order totals)
+     */
+    @Query("select coalesce(sum(o.totalPrice), 0) from Order o where o.paymentStatus = 'PAID'")
+    long getTotalRevenueByPaymentStatusPaid();
+
+    /**
+     * Daily revenue aggregation for paid orders within a start date
+     */
+    @Query("select cast(o.createdAt as LocalDate), coalesce(sum(o.totalPrice), 0) " +
+           "from Order o " +
+           "where o.paymentStatus = 'PAID' and o.createdAt >= :startDate " +
+           "group by cast(o.createdAt as LocalDate) " +
+           "order by cast(o.createdAt as LocalDate) asc")
+    List<Object[]> findRevenueByDateRange(@Param("startDate") LocalDateTime startDate);
+
+    /**
+     * Count of orders grouped by status
+     */
+    @Query("select o.status, count(o) from Order o group by o.status")
+    List<Object[]> getOrderStatusStats();
+
+    /**
      * Get recent orders for user (last N orders)
      */
     @Query("""

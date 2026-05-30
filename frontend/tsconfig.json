@@ -32,7 +32,8 @@
       "@services/*": ["src/services/*"],
       "@utils/*": ["src/utils/*"],
       "@hooks/*": ["src/hooks/*"],
-      "@features/*": ["src/features/*"]
+      "@features/*": ["src/features/*"],
+      "@routes/*": ["src/routes/*"]
     }
   },
   "include": ["src", "src/vite-env.d.ts"],
