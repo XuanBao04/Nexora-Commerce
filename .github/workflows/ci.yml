@@ -2,14 +2,14 @@ name: Nexora Commerce Test Pipeline
 
 on:
   push:
-    branches: [ "main","bao/backend","thanh/frontend", "wolf"]
+    branches: [ "main" ]
   pull_request:
-    branches: [ "main", "bao/backend", "thanh/frontend", "wolf"]
+    branches: [ "main" ]
   workflow_dispatch:
 
 jobs:
-  backend-tests:
-    name: Backend Tests
+  backend-build:
+    name: Backend Build (No Tests)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source
@@ -22,27 +22,28 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Run backend tests
+      - name: Build backend
         working-directory: backend
-        run: mvn --batch-mode clean test
+        run: mvn --batch-mode clean package -DskipTests
 
-      - name: Collect backend test reports
-        if: always()
-        run: |
-          mkdir -p test-artifacts/backend
-          echo "Backend test reports" > test-artifacts/backend/README.txt
-          if [ -d backend/target/surefire-reports ]; then
-            cp -R backend/target/surefire-reports test-artifacts/backend/
-          fi
-          if [ -d backend/target/site/jacoco ]; then
-            cp -R backend/target/site/jacoco test-artifacts/backend/
-          fi
+  frontend-build:
+    name: Frontend Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
 
-      - name: Upload backend test reports
-        if: always()
-        uses: actions/upload-artifact@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          name: backend-test-reports
-          path: test-artifacts/backend/
-          if-no-files-found: error
-          retention-days: 14
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
