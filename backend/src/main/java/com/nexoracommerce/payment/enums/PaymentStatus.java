@@ -1,4 +1,4 @@
-package com.nexoracommerce.order.enums;
+package com.nexoracommerce.payment.enums;
 
 /**
  * Payment status for orders
