@@ -18,14 +18,6 @@ const PaymentResult = () => {
       if (vnp_ResponseCode === '00') {
         setStatus('SUCCESS');
         toast.success("Thanh toán thành công!");
-        
-        // Local Dev Fallback: Call the IPN endpoint from the frontend to trigger the order status update.
-        // In production, VNPAY Server will call the IPN endpoint directly, but in local dev, VNPAY cannot reach localhost.
-        fetch(`http://localhost:8080/api/v1/payments/vnpay/ipn?${searchParams.toString()}`)
-          .then(res => res.json())
-          .then(data => console.log("IPN Fallback Sync:", data))
-          .catch(err => console.error("IPN Fallback Error:", err));
-          
       } else {
         setStatus('FAILED');
         toast.error("Thanh toán thất bại. Vui lòng thử lại.");
