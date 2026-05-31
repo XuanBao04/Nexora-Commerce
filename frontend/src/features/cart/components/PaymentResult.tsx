@@ -10,8 +10,20 @@ const PaymentResult = () => {
   const [status, setStatus] = useState<'SUCCESS' | 'FAILED' | 'PENDING'>('PENDING');
 
   useEffect(() => {
+    const nexoraResult = searchParams.get('nexora_Result');
     // Check parameters from VNPAY
     const vnp_ResponseCode = searchParams.get('vnp_ResponseCode');
+
+    if (nexoraResult !== null) {
+      if (nexoraResult === 'SUCCESS') {
+        setStatus('SUCCESS');
+        toast.success("Thanh toán thành công!");
+      } else {
+        setStatus('FAILED');
+        toast.error("Thanh toán thất bại. Vui lòng thử lại.");
+      }
+      return;
+    }
     
     // VNPAY Success Code is '00'
     if (vnp_ResponseCode !== null) {

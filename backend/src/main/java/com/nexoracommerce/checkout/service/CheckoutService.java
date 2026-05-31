@@ -150,6 +150,37 @@ public class CheckoutService implements ICheckoutService {
         
         Order order = orderRepository.findById(java.util.Objects.requireNonNull(orderId))
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found: " + orderId));
+
+        if (providerTransactionId != null) {
+            var existingTransaction = paymentTransactionRepository.findByProviderTransactionId(providerTransactionId);
+            if (existingTransaction.isPresent()) {
+                log.info("Payment transaction already processed: orderId={}, providerTransactionId={}",
+                        orderId, providerTransactionId);
+                return new PaymentResponse(
+                        orderId,
+                        order.getStatus().name(),
+                        "Payment transaction already processed."
+                );
+            }
+        }
+
+        if (paymentSuccessful && order.getPaymentStatus() == PaymentStatus.PAID) {
+            log.info("Order is already paid: orderId={}", orderId);
+            return new PaymentResponse(
+                    orderId,
+                    order.getStatus().name(),
+                    "Payment already confirmed."
+            );
+        }
+
+        if (!paymentSuccessful && order.getStatus() == OrderStatus.CANCELLED) {
+            log.info("Order is already cancelled after failed payment: orderId={}", orderId);
+            return new PaymentResponse(
+                    orderId,
+                    order.getStatus().name(),
+                    "Payment failure already processed."
+            );
+        }
         
         if (order.getStatus() != OrderStatus.PENDING) {
             throw new BusinessLogicException("Order is not in PENDING status: " + orderId);

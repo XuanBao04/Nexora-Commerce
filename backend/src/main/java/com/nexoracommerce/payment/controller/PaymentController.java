@@ -2,13 +2,19 @@ package com.nexoracommerce.payment.controller;
 import com.nexoracommerce.checkout.service.ICheckoutService;
 import com.nexoracommerce.payment.service.VnPayService;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.web.bind.annotation.*;
 import com.nexoracommerce.payment.enums.PaymentMethod;
 
 
+import java.net.URI;
+import java.util.HashMap;
 import java.util.Map;
 
 @Slf4j
@@ -21,39 +27,77 @@ public class PaymentController {
     private final VnPayService vnPayService;
     private final ICheckoutService checkoutService;
 
+    @Value("${vnpay.frontend-return-url:http://localhost:5173/authenticated/checkout/result}")
+    private String frontendReturnUrl;
+
+    @GetMapping("/vnpay/return")
+    public ResponseEntity<Void> vnpayReturn(
+            @RequestParam Map<String, String> queryParams,
+            HttpServletRequest request) {
+        log.info("Received VNPAY return: {}", queryParams);
+
+        String result;
+        try {
+            result = processVnpayCallback(queryParams) ? "SUCCESS" : "FAILED";
+        } catch (Exception e) {
+            log.error("Error processing VNPAY return", e);
+            result = "FAILED";
+        }
+
+        UriComponentsBuilder redirectBuilder = UriComponentsBuilder.fromUriString(frontendReturnUrl);
+        if (request.getQueryString() != null) {
+            redirectBuilder.query(request.getQueryString());
+        }
+
+        URI redirectUri = redirectBuilder
+                .queryParam("nexora_Result", result)
+                .build(true)
+                .toUri();
+
+        return ResponseEntity.status(HttpStatus.FOUND)
+                .location(redirectUri)
+                .build();
+    }
+
     @GetMapping("/vnpay/ipn")
     public ResponseEntity<Map<String, String>> vnpayIpn(@RequestParam Map<String, String> queryParams) {
         log.info("Received VNPAY IPN: {}", queryParams);
         try {
-            boolean isValidSignature = vnPayService.verifySignature(queryParams);
-            if (!isValidSignature) {
-                log.warn("Invalid VNPAY signature");
-                return ResponseEntity.ok(Map.of("RspCode", "97", "Message", "Invalid signature"));
-            }
-
-            String orderId = queryParams.get("vnp_TxnRef");
-            String responseCode = queryParams.get("vnp_ResponseCode");
-            String transactionNo = queryParams.get("vnp_TransactionNo");
-            Long amount = null;
-            try {
-                String amountStr = queryParams.get("vnp_Amount");
-                if (amountStr != null) amount = Long.parseLong(amountStr) / 100;
-            } catch (Exception e) {
-                log.warn("Invalid vnp_Amount format");
-            }
-
-            if ("00".equals(responseCode)) {
-                // Success
-                checkoutService.processPayment(orderId, true, transactionNo, amount, PaymentMethod.VNPAY);
-                return ResponseEntity.ok(Map.of("RspCode", "00", "Message", "Confirm Success"));
-            } else {
-                // Failed or cancelled
-                checkoutService.processPayment(orderId, false, transactionNo, amount, PaymentMethod.VNPAY);
-                return ResponseEntity.ok(Map.of("RspCode", "00", "Message", "Confirm Success"));
-            }
+            boolean processed = processVnpayCallback(queryParams);
+            return processed
+                    ? ResponseEntity.ok(Map.of("RspCode", "00", "Message", "Confirm Success"))
+                    : ResponseEntity.ok(Map.of("RspCode", "97", "Message", "Invalid signature"));
         } catch (Exception e) {
             log.error("Error processing VNPAY IPN", e);
             return ResponseEntity.ok(Map.of("RspCode", "99", "Message", "Unknown error"));
+        }
+    }
+
+    private boolean processVnpayCallback(Map<String, String> queryParams) {
+        Map<String, String> signatureParams = new HashMap<>(queryParams);
+        boolean isValidSignature = vnPayService.verifySignature(signatureParams);
+        if (!isValidSignature) {
+            log.warn("Invalid VNPAY signature");
+            return false;
+        }
+
+        String orderId = queryParams.get("vnp_TxnRef");
+        String responseCode = queryParams.get("vnp_ResponseCode");
+        String transactionStatus = queryParams.get("vnp_TransactionStatus");
+        String transactionNo = queryParams.get("vnp_TransactionNo");
+        Long amount = parseVnpayAmount(queryParams.get("vnp_Amount"));
+        boolean paymentSuccessful = "00".equals(responseCode) && "00".equals(transactionStatus);
+
+        checkoutService.processPayment(orderId, paymentSuccessful, transactionNo, amount, PaymentMethod.VNPAY);
+        return true;
+    }
+
+    private Long parseVnpayAmount(String amountValue) {
+        try {
+            return amountValue != null ? Long.parseLong(amountValue) / 100 : null;
+        } catch (NumberFormatException e) {
+            log.warn("Invalid vnp_Amount format: {}", amountValue);
+            return null;
         }
     }
 }
