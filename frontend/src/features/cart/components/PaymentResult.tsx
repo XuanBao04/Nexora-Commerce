@@ -3,6 +3,18 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { FaCheckCircle, FaTimesCircle, FaArrowRight } from "react-icons/fa";
 
 import { toast } from "react-toastify";
+import { API_CONFIG } from "@/utils/constants";
+
+const buildVnpayReturnUrl = (queryString: string) => {
+  const baseUrl = API_CONFIG.BASE_URL.replace(/\/$/, "");
+  const returnPath = `${baseUrl}/v1/payments/vnpay/return`;
+
+  if (returnPath.startsWith("http")) {
+    return `${returnPath}?${queryString}`;
+  }
+
+  return `${window.location.origin}${returnPath}?${queryString}`;
+};
 
 const PaymentResult = () => {
   const [searchParams] = useSearchParams();
@@ -27,13 +39,8 @@ const PaymentResult = () => {
     
     // VNPAY Success Code is '00'
     if (vnp_ResponseCode !== null) {
-      if (vnp_ResponseCode === '00') {
-        setStatus('SUCCESS');
-        toast.success("Thanh toán thành công!");
-      } else {
-        setStatus('FAILED');
-        toast.error("Thanh toán thất bại. Vui lòng thử lại.");
-      }
+      setStatus('PENDING');
+      window.location.replace(buildVnpayReturnUrl(searchParams.toString()));
       return;
     }
 
