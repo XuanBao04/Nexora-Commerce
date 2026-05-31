@@ -5,6 +5,7 @@ import com.nexoracommerce.constant.MessageConstant;
 import com.nexoracommerce.cart.dto.request.CartItemRequest;
 import com.nexoracommerce.cart.dto.response.CartResponse;
 import com.nexoracommerce.common.exception.ResourceNotFoundException;
+import com.nexoracommerce.common.exception.BusinessLogicException;
 import com.nexoracommerce.cart.mapper.CartMapper;
 import com.nexoracommerce.cart.service.ICartService;
 import com.nexoracommerce.inventory.service.IInventoryService;
@@ -46,8 +47,15 @@ public class CartServiceImpl implements ICartService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         MessageConstant.Product.NOT_FOUND + request.productId()));
 
-        // Reserve stock trước khi cập nhật giỏ hàng (sẽ ném exception nếu không đủ hàng)
-        inventoryService.reserveStock(variant.getSku(), request.quantity());
+        // Kiểm tra tồn kho khả dụng trước khi thêm vào giỏ (không gọi reserveStock ở CSDL)
+        Integer currentInCart = redisCartService.getItemQuantity(userId, variant.getSku());
+        int targetQuantity = (currentInCart != null ? currentInCart : 0) + request.quantity();
+
+        boolean hasStock = inventoryService.hasEnoughStock(variant.getSku(), targetQuantity);
+        if (!hasStock) {
+            throw new BusinessLogicException(
+                    MessageConstant.Inventory.INSUFFICIENT_STOCK + variant.getSku());
+        }
 
         // Thêm vào Redis (HINCRBY — tự tăng nếu đã tồn tại)
         redisCartService.addItem(userId, variant.getSku(), request.quantity());
@@ -65,9 +73,6 @@ public class CartServiceImpl implements ICartService {
                     MessageConstant.Cart.NOT_FOUND + productId);
         }
 
-        // Giải phóng kho khi xóa khỏi giỏ
-        inventoryService.releaseStock(productId, currentQty);
-
         redisCartService.removeItem(userId, productId);
         return buildCartResponse(userId);
     }
@@ -82,13 +87,11 @@ public class CartServiceImpl implements ICartService {
                     MessageConstant.Cart.NOT_FOUND + productId);
         }
 
-        int diff = quantity - oldQuantity;
-
-        // Điều chỉnh số lượng giữ trong kho
-        if (diff > 0) {
-            inventoryService.reserveStock(productId, diff);
-        } else if (diff < 0) {
-            inventoryService.releaseStock(productId, Math.abs(diff));
+        // Kiểm tra tồn kho khả dụng cho số lượng mới cập nhật
+        boolean hasStock = inventoryService.hasEnoughStock(productId, quantity);
+        if (!hasStock) {
+            throw new BusinessLogicException(
+                    MessageConstant.Inventory.INSUFFICIENT_STOCK + productId);
         }
 
         redisCartService.setItemQuantity(userId, productId, quantity);
@@ -98,11 +101,6 @@ public class CartServiceImpl implements ICartService {
     @Override
     @Transactional
     public void clearCart(String userId) {
-        // Giải phóng kho cho tất cả các mặt hàng trong giỏ trước khi xóa
-        Map<String, Integer> cart = redisCartService.getCart(userId);
-        for (Map.Entry<String, Integer> entry : cart.entrySet()) {
-            inventoryService.releaseStock(entry.getKey(), entry.getValue());
-        }
         redisCartService.clearCart(userId);
     }
 

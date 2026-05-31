@@ -9,10 +9,10 @@ interface ProductCardProps {
 }
 
 const ProductCard = memo(({ product, onOpenDetail }: ProductCardProps) => {
-  // Calculate total stock across variants (with fallback to direct product.quantity)
+  // Calculate total available stock across variants (with fallback to direct product.quantity)
   const totalStock = useMemo(() => {
     if (!product.variants || product.variants.length === 0) return product.quantity || 0;
-    return product.variants.reduce((sum, v) => sum + (v.quantity || 0), 0);
+    return product.variants.reduce((sum, v) => sum + ((v.quantity || 0) - (v.reservedQuantity || 0)), 0);
   }, [product.variants, product.quantity]);
 
   const isOutOfStock = (product.status && product.status !== "ACTIVE") || totalStock === 0;

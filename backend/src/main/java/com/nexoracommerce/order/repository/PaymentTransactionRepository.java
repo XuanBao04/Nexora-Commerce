@@ -2,8 +2,8 @@ package com.nexoracommerce.order.repository;
 
 import com.nexoracommerce.common.repository.BaseRepository;
 import com.nexoracommerce.order.entity.PaymentTransaction;
-import com.nexoracommerce.order.enums.PaymentMethod;
-import com.nexoracommerce.order.enums.TransactionStatus;
+import com.nexoracommerce.payment.enums.PaymentMethod;
+import com.nexoracommerce.payment.enums.TransactionStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;

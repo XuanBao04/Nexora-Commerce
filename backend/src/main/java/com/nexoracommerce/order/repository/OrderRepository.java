@@ -3,7 +3,7 @@ package com.nexoracommerce.order.repository;
 import com.nexoracommerce.common.enums.OrderStatus;
 import com.nexoracommerce.common.repository.BaseRepository;
 import com.nexoracommerce.order.entity.Order;
-import com.nexoracommerce.order.enums.PaymentStatus;
+import com.nexoracommerce.payment.enums.PaymentStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
@@ -33,6 +33,16 @@ public interface OrderRepository extends BaseRepository<Order, String> {
 
     @Query("select distinct o from Order o left join fetch o.orderItems where o.id = :orderId")
     Optional<Order> findByIdWithItems(@Param("orderId") String orderId);
+
+    @Query("""
+            select distinct o
+            from Order o
+            left join fetch o.orderItems
+            join fetch o.user
+            where o.id = :orderId
+            """)
+    Optional<Order> findByIdWithItemsAndUser(@Param("orderId") String orderId);
+
 
     @Query("""
             select distinct o

@@ -5,6 +5,8 @@ import { OrderResponse } from "../types/order";
 import PriceBreakdown from "@/features/cart/components/PriceBreakdown";
 import { formatPrice } from "@/features/cart/utils/priceCalculation";
 import { FaChevronLeft, FaChevronRight, FaChevronDown, FaClipboardList, FaRegCalendarAlt, FaShippingFast, FaCheckCircle, FaExclamationTriangle, FaTimes, FaCreditCard, FaCheckSquare, FaTimesCircle } from "react-icons/fa";
+import { toast } from "react-toastify";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 
 const getStatusBadgeClass = (status: OrderResponse["status"]) => {
   switch (status) {
@@ -80,6 +82,22 @@ export default function Order() {
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [productMap, setProductMap] = useState<Record<string, { name: string; imageUrl?: string }>>({});
 
+  // ConfirmModal State
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalConfig, setModalConfig] = useState<{
+    title: string;
+    message: string;
+    confirmLabel?: string;
+    cancelLabel?: string;
+    type: 'danger' | 'warning' | 'info' | 'success';
+    onConfirm: () => void;
+  }>({
+    title: "",
+    message: "",
+    type: 'info',
+    onConfirm: () => {}
+  });
+
   // Pagination State
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
@@ -127,41 +145,62 @@ export default function Order() {
     fetchOrders();
   }, [userId, currentPage]);
 
-  const handleCancelOrder = async (orderId: string) => {
-    setCancelingOrderId(orderId);
-    setError(null);
+  const handleCancelOrder = (orderId: string) => {
+    setModalConfig({
+      title: "Hủy đơn đặt hàng",
+      message: "Bạn có chắc chắn muốn HỦY đơn hàng này không? Hành động này không thể hoàn tác.",
+      confirmLabel: "Hủy đơn hàng",
+      cancelLabel: "Quay lại",
+      type: 'danger',
+      onConfirm: async () => {
+        setModalOpen(false);
+        setCancelingOrderId(orderId);
+        setError(null);
 
-    try {
-      const updatedOrder = await orderService.cancelOrder(orderId);
-      setOrders((prev) =>
-        prev.map((order) => (order.id === orderId ? updatedOrder : order)),
-      );
-    } catch (err: Error | unknown) {
-      const errorMessage = err instanceof Error ? err.message : "Hủy đơn hàng thất bại.";
-      setError(errorMessage);
-    } finally {
-      setCancelingOrderId(null);
-    }
+        try {
+          const updatedOrder = await orderService.cancelOrder(orderId);
+          setOrders((prev) =>
+            prev.map((order) => (order.id === orderId ? updatedOrder : order)),
+          );
+          toast.success("Hủy đơn hàng thành công!");
+        } catch (err: Error | unknown) {
+          const errorMessage = err instanceof Error ? err.message : "Hủy đơn hàng thất bại.";
+          toast.error(errorMessage);
+        } finally {
+          setCancelingOrderId(null);
+        }
+      }
+    });
+    setModalOpen(true);
   };
 
-  const handleConfirmDelivery = async (orderId: string) => {
-    const confirm = window.confirm("Xác nhận bạn đã nhận được hàng?");
-    if (!confirm) return;
-    
-    setConfirmingOrderId(orderId);
-    setError(null);
+  const handleConfirmDelivery = (orderId: string) => {
+    setModalConfig({
+      title: "Xác nhận nhận hàng",
+      message: "Xác nhận bạn đã nhận được hàng và hoàn thành đơn hàng?",
+      confirmLabel: "Đồng ý",
+      cancelLabel: "Quay lại",
+      type: 'success',
+      onConfirm: async () => {
+        setModalOpen(false);
+        setConfirmingOrderId(orderId);
+        setError(null);
 
-    try {
-      const updatedOrder = await orderService.confirmDelivery(orderId);
-      setOrders((prev) =>
-        prev.map((order) => (order.id === orderId ? updatedOrder : order)),
-      );
-    } catch (err: Error | unknown) {
-      const errorMessage = err instanceof Error ? err.message : "Xác nhận nhận hàng thất bại.";
-      setError(errorMessage);
-    } finally {
-      setConfirmingOrderId(null);
-    }
+        try {
+          const updatedOrder = await orderService.confirmDelivery(orderId);
+          setOrders((prev) =>
+            prev.map((order) => (order.id === orderId ? updatedOrder : order)),
+          );
+          toast.success("Xác nhận nhận hàng thành công!");
+        } catch (err: Error | unknown) {
+          const errorMessage = err instanceof Error ? err.message : "Xác nhận nhận hàng thất bại.";
+          toast.error(errorMessage);
+        } finally {
+          setConfirmingOrderId(null);
+        }
+      }
+    });
+    setModalOpen(true);
   };
 
   const handlePageChange = (page: number) => {
@@ -370,9 +409,11 @@ export default function Order() {
                         <span>Thông tin giao nhận</span>
                       </h4>
                       <p className="text-sm font-semibold text-zinc-800">{order.shippingAddress}</p>
-                      <p className="text-xs text-zinc-400 font-semibold">
-                        Phường {order.ward}, Quận {order.district}, {order.city}
-                      </p>
+                      {order.ward && order.district && order.city && (
+                        <p className="text-xs text-zinc-400 font-semibold">
+                          Phường {order.ward}, Quận {order.district}, {order.city}
+                        </p>
+                      )}
                     </div>
 
                     <div className="bg-white/80 p-5 rounded-2xl border border-zinc-200/40 shadow-sm space-y-2">
@@ -548,17 +589,15 @@ export default function Order() {
                       </button>
                     )}
                     
-                    <button
-                      onClick={() => handleCancelOrder(order.id)}
-                      disabled={!isPending || isCancelling}
-                      className="btn-danger h-10 px-5 text-xs font-bold uppercase tracking-wider disabled:bg-zinc-100 disabled:border-zinc-200/50 disabled:text-zinc-400 disabled:shadow-none"
-                    >
-                      {isCancelling
-                        ? "Đang xử lý..."
-                        : !isPending
-                          ? "Không thể hủy đơn"
-                          : "Hủy đơn đặt hàng"}
-                    </button>
+                    {isPending && (
+                      <button
+                        onClick={() => handleCancelOrder(order.id)}
+                        disabled={isCancelling}
+                        className="btn-danger h-10 px-5 text-xs font-bold uppercase tracking-wider"
+                      >
+                        {isCancelling ? "Đang xử lý..." : "Hủy đơn đặt hàng"}
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
@@ -605,6 +644,18 @@ export default function Order() {
           </div>
         </div>
       )}
+
+      {/* ConfirmModal for Cancellation and Delivery Confirmation */}
+      <ConfirmModal
+        isOpen={modalOpen}
+        title={modalConfig.title}
+        message={modalConfig.message}
+        confirmLabel={modalConfig.confirmLabel}
+        cancelLabel={modalConfig.cancelLabel}
+        type={modalConfig.type}
+        onConfirm={modalConfig.onConfirm}
+        onCancel={() => setModalOpen(false)}
+      />
     </div>
   );
 }

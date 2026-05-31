@@ -1,7 +1,7 @@
 package com.nexoracommerce.order.dto.response;
 
 import com.nexoracommerce.common.enums.OrderStatus;
-import com.nexoracommerce.order.enums.PaymentStatus;
+import com.nexoracommerce.payment.enums.PaymentStatus;
 import java.time.LocalDateTime;
 import java.util.List;
 

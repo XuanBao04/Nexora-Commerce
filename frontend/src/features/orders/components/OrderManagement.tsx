@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { adminApiService } from "@/features/admin/services/adminApiService";
 import { useAdminPagination } from "@/features/admin/hooks/useAdminPagination";
 import { AdminPagination } from "@/features/admin/components/AdminPagination";
@@ -26,6 +27,7 @@ const OrderManagement = () => {
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [productMap, setProductMap] = useState<Record<string, { name: string; imageUrl?: string }>>({});
+  const [statusConfirm, setStatusConfirm] = useState<{ orderId: string; newStatus: string } | null>(null);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -73,15 +75,14 @@ const OrderManagement = () => {
     fetchOrders();
   }, [page, size]);
 
-  const handleUpdateStatus = async (orderId: string, newStatus: string) => {
-    if (newStatus === 'CANCELLED') {
-      const confirmCancel = window.confirm("Bạn có chắc chắn muốn HỦY đơn hàng này không? Hành động này không thể hoàn tác.");
-      if (!confirmCancel) return;
-    } else {
-      const confirmUpdate = window.confirm(`Cập nhật trạng thái đơn hàng thành ${getStatusInfo(newStatus).label}?`);
-      if (!confirmUpdate) return;
-    }
+  const handleUpdateStatus = (orderId: string, newStatus: string) => {
+    setStatusConfirm({ orderId, newStatus });
+  };
 
+  const handleConfirmUpdateStatus = async () => {
+    if (!statusConfirm) return;
+    const { orderId, newStatus } = statusConfirm;
+    setStatusConfirm(null);
     setUpdatingOrderId(orderId);
     try {
       const updatedOrder = await adminApiService.updateOrderStatus(orderId, newStatus);
@@ -311,9 +312,11 @@ const OrderManagement = () => {
                       <div>
                         <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2.5">Thông tin giao nhận</h4>
                         <p className="text-xs font-semibold text-zinc-700">{order.shippingAddress}</p>
-                        <p className="text-[11px] text-zinc-400 font-medium mt-1">
-                          {order.ward}, {order.district}, {order.city}
-                        </p>
+                        {order.ward && order.district && order.city && (
+                          <p className="text-[11px] text-zinc-400 font-medium mt-1">
+                            {order.ward}, {order.district}, {order.city}
+                          </p>
+                        )}
                       </div>
                       <div>
                         <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2.5">Liên hệ khách hàng</h4>
@@ -457,6 +460,23 @@ const OrderManagement = () => {
 
       {/* Pagination Controls */}
       <AdminPagination pagination={pagination} onPageChange={setPage} />
+
+      {/* Confirm Status Update Modal */}
+      <ConfirmModal
+        isOpen={statusConfirm !== null}
+        title={statusConfirm?.newStatus === 'CANCELLED' ? 'Hủy đơn hàng' : 'Cập nhật trạng thái'}
+        message={
+          statusConfirm?.newStatus === 'CANCELLED'
+            ? 'Bạn có chắc chắn muốn HỦY đơn hàng này không? Hành động này không thể hoàn tác.'
+            : `Cập nhật trạng thái đơn hàng thành ${statusConfirm ? getStatusInfo(statusConfirm.newStatus).label : ''}?`
+        }
+        confirmLabel={statusConfirm?.newStatus === 'CANCELLED' ? 'Hủy đơn hàng' : 'Xác nhận'}
+        cancelLabel="Quay lại"
+        type={statusConfirm?.newStatus === 'CANCELLED' ? 'danger' : 'warning'}
+        isLoading={updatingOrderId !== null}
+        onConfirm={handleConfirmUpdateStatus}
+        onCancel={() => setStatusConfirm(null)}
+      />
     </div>
   );
 };

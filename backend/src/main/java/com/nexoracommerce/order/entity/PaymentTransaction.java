@@ -1,7 +1,7 @@
 package com.nexoracommerce.order.entity;
 
-import com.nexoracommerce.order.enums.PaymentMethod;
-import com.nexoracommerce.order.enums.TransactionStatus;
+import com.nexoracommerce.payment.enums.PaymentMethod;
+import com.nexoracommerce.payment.enums.TransactionStatus;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;

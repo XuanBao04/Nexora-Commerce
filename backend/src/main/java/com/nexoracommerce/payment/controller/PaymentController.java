@@ -1,6 +1,4 @@
 package com.nexoracommerce.payment.controller;
-
-import com.nexoracommerce.common.response.ApiResponse;
 import com.nexoracommerce.checkout.service.ICheckoutService;
 import com.nexoracommerce.payment.service.VnPayService;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -8,6 +6,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.nexoracommerce.payment.enums.PaymentMethod;
+
 
 import java.util.Map;
 
@@ -44,11 +44,11 @@ public class PaymentController {
 
             if ("00".equals(responseCode)) {
                 // Success
-                checkoutService.processPayment(orderId, true, transactionNo, amount, com.nexoracommerce.order.enums.PaymentMethod.VNPAY);
+                checkoutService.processPayment(orderId, true, transactionNo, amount, PaymentMethod.VNPAY);
                 return ResponseEntity.ok(Map.of("RspCode", "00", "Message", "Confirm Success"));
             } else {
                 // Failed or cancelled
-                checkoutService.processPayment(orderId, false, transactionNo, amount, com.nexoracommerce.order.enums.PaymentMethod.VNPAY);
+                checkoutService.processPayment(orderId, false, transactionNo, amount, PaymentMethod.VNPAY);
                 return ResponseEntity.ok(Map.of("RspCode", "00", "Message", "Confirm Success"));
             }
         } catch (Exception e) {

@@ -1,6 +1,7 @@
 package com.nexoracommerce.product.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.BatchSize;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -91,6 +92,7 @@ public class ProductVariant {
         joinColumns = @JoinColumn(name = "sku"),
         inverseJoinColumns = @JoinColumn(name = "value_id")
     )
+    @BatchSize(size = 20)
     @Builder.Default
     private Set<ProductAttributeValue> attributeValues = new HashSet<>();
 }

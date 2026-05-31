@@ -111,17 +111,8 @@ public class InventoryServiceImpl implements IInventoryService {
     public void confirmStock(String productId, Integer quantity) {
         validateProductId(productId);
         validateQuantity(quantity);
-        
-        ProductVariant variant = findVariantOrThrow(productId);
-        
-        int newReserved = getSafeReservedQuantity(variant) - quantity;
-        if (newReserved < 0) newReserved = 0;
-        
-        variant.setReservedQuantity(newReserved);
-        variant.setQuantity(variant.getQuantity() - quantity);
-        variant.setSoldQuantity((variant.getSoldQuantity() == null ? 0 : variant.getSoldQuantity()) + quantity);
-        
-        productVariantRepository.save(variant);
+
+        log.info("Stock reservation confirmed for product: {}, quantity: {}", productId, quantity);
     }
 
     @Override

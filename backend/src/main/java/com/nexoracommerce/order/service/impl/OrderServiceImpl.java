@@ -13,8 +13,8 @@ import com.nexoracommerce.order.entity.OrderItem;
 import com.nexoracommerce.common.enums.OrderStatus;
 import com.nexoracommerce.common.exception.ResourceNotFoundException;
 import com.nexoracommerce.common.exception.BusinessLogicException;
-import com.nexoracommerce.order.enums.PaymentStatus;
-import com.nexoracommerce.order.enums.TransactionStatus;
+import com.nexoracommerce.payment.enums.PaymentStatus;
+import com.nexoracommerce.payment.enums.TransactionStatus;
 import com.nexoracommerce.order.entity.PaymentTransaction;
 import com.nexoracommerce.order.mapper.OrderMapper;
 import com.nexoracommerce.order.repository.OrderRepository;
@@ -26,7 +26,9 @@ import com.nexoracommerce.product.entity.ProductVariant;
 import com.nexoracommerce.product.repository.ProductVariantRepository;
 import com.nexoracommerce.product.entity.Product;
 import com.nexoracommerce.coupon.service.ICouponService;
+import com.nexoracommerce.redis.service.RedisStockService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -34,7 +36,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -46,6 +47,7 @@ import java.util.stream.Collectors;
  * Service implementation for Order operations
  * Handles order creation, status updates, and price calculations
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -58,6 +60,7 @@ public class OrderServiceImpl implements IOrderService {
     private final ICouponService couponService;
     private final ProductVariantRepository productVariantRepository;
     private final IOrderStatusHistoryService orderStatusHistoryService;
+    private final RedisStockService redisStockService;
 
     private static final long SHIPPING_FEE = 29_900L;
 
@@ -221,9 +224,22 @@ public class OrderServiceImpl implements IOrderService {
             throw new BusinessLogicException(MessageConstant.Order.CANNOT_CANCEL + order.getStatus());
         }
 
-        // Release reserved stock when canceling
+        // Release reserved stock in DB and increment back in Redis when canceling
         for (OrderItem item : order.getOrderItems()) {
             inventoryService.releaseStock(item.getVariant().getSku(), item.getQuantity());
+            try {
+                redisStockService.incrementStock(item.getVariant().getSku(), item.getQuantity());
+                log.info("Restored Redis stock during order cancellation: orderId={}, variantSku={}, quantity={}",
+                        orderId, item.getVariant().getSku(), item.getQuantity());
+            } catch (Exception e) {
+                log.error("Failed to restore Redis stock during cancellation: orderId={}, sku={}", orderId, item.getVariant().getSku(), e);
+            }
+        }
+
+        // Handle payment refund status if the order was already PAID
+        if (order.getPaymentStatus() == PaymentStatus.PAID) {
+            order.setPaymentStatus(PaymentStatus.REFUNDED);
+            log.info("Order was paid, transitioning paymentStatus to REFUNDED: orderId={}", orderId);
         }
 
         order.setStatus(OrderStatus.CANCELLED);
@@ -418,19 +434,23 @@ public class OrderServiceImpl implements IOrderService {
      * Prevents invalid state transitions.
      */
     private void validateStatusTransition(OrderStatus currentStatus, OrderStatus newStatus) {
-        // DELIVERED is a terminal state - no transitions from it
-        if (currentStatus == OrderStatus.DELIVERED) {
-            throw new BusinessLogicException("Cannot transition from DELIVERED state");
-        }
-
-        // CANCELLED is a terminal state
-        if (currentStatus == OrderStatus.CANCELLED) {
-            throw new BusinessLogicException("Cannot transition from CANCELLED state");
-        }
-
         // Prevent same status transitions
         if (currentStatus == newStatus) {
             throw new BusinessLogicException("Order is already in status: " + currentStatus);
+        }
+
+        // Strict whitelist of allowed transitions
+        boolean allowed = switch (currentStatus) {
+            case PENDING -> newStatus == OrderStatus.CONFIRMED || newStatus == OrderStatus.CANCELLED;
+            case CONFIRMED -> newStatus == OrderStatus.PROCESSING || newStatus == OrderStatus.CANCELLED;
+            case PROCESSING -> newStatus == OrderStatus.SHIPPED || newStatus == OrderStatus.CANCELLED;
+            case SHIPPED -> newStatus == OrderStatus.DELIVERED;
+            case DELIVERED, CANCELLED -> false;
+        };
+
+        if (!allowed) {
+            throw new BusinessLogicException(
+                    "Invalid status transition: " + currentStatus + " → " + newStatus);
         }
     }
 
@@ -451,6 +471,28 @@ public class OrderServiceImpl implements IOrderService {
         if (newStatus == OrderStatus.SHIPPED && currentStatus == OrderStatus.PROCESSING) {
             for (OrderItem item : order.getOrderItems()) {
                 inventoryService.shipStock(item.getVariant().getSku(), item.getQuantity());
+            }
+        }
+
+        // ANY (PENDING/CONFIRMED/PROCESSING) → CANCELLED: Restore reserved stock + Redis
+        if (newStatus == OrderStatus.CANCELLED) {
+            for (OrderItem item : order.getOrderItems()) {
+                inventoryService.releaseStock(item.getVariant().getSku(), item.getQuantity());
+                try {
+                    redisStockService.incrementStock(item.getVariant().getSku(), item.getQuantity());
+                    log.info("Admin cancel - restored Redis stock: orderId={}, sku={}, qty={}",
+                            order.getId(), item.getVariant().getSku(), item.getQuantity());
+                } catch (Exception e) {
+                    log.error("Admin cancel - failed to restore Redis stock: orderId={}, sku={}",
+                            order.getId(), item.getVariant().getSku(), e);
+                }
+            }
+
+            // Handle payment refund status if the order was already PAID
+            if (order.getPaymentStatus() == PaymentStatus.PAID) {
+                order.setPaymentStatus(PaymentStatus.REFUNDED);
+                log.info("Admin cancel - order was paid, transitioning paymentStatus to REFUNDED: orderId={}",
+                        order.getId());
             }
         }
     }

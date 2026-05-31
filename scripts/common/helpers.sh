@@ -110,6 +110,21 @@ load_env() {
     set -a
     source "${ENV_FILE}"
     set +a
+    
+    # Strip surrounding quotes from key environment variables to prevent Make/source literals
+    for var in MAIL_PASSWORD MAIL_FROM DB_URL CORS_ALLOWED_ORIGINS; do
+      local val="${!var:-}"
+      if [[ "${val}" == \"*\" ]]; then
+        val="${val#\"}"
+        val="${val%\"}"
+        export "$var"="$val"
+      elif [[ "${val}" == \'*\' ]]; then
+        val="${val#\'}"
+        val="${val%\'}"
+        export "$var"="$val"
+      fi
+    done
+    
     log_debug "Environment loaded from ${ENV_FILE}"
   else
     log_warn "Environment file not found: ${ENV_FILE}"

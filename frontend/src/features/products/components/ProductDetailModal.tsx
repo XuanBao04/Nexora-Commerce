@@ -76,8 +76,8 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
     return list;
   }, [product.images, product.imageUrl]);
 
-  // Stock status calculation
-  const stockLimit = currentVariant ? currentVariant.quantity : 0;
+  // Stock status calculation (using available stock = quantity - reservedQuantity)
+  const stockLimit = currentVariant ? ((currentVariant.quantity || 0) - (currentVariant.reservedQuantity || 0)) : 0;
   const isOutOfStock = stockLimit <= 0;
   const isFullySelected = true; // Always true because first variant is automatically selected by SKU
 

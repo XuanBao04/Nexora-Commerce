@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
 import { useCartStore } from "@/store/useCartStore";
 import CartItem from "./CartItem";
-import CouponInput from "./CouponInput";
 import PriceBreakdown from "./PriceBreakdown";
-import { Product } from "@/features/products/types/product";
 import { FaArrowLeft, FaShoppingCart, FaCreditCard } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 
@@ -21,8 +19,8 @@ const Cart = () => {
   const { cart, isLoading, error, fetchCart, removeItem, updateItem, clear } =
     useCartStore();
 
-  const [couponCode, setCouponCode] = useState<string | null>(null);
-  const [discountAmount, setDiscountAmount] = useState(0);
+  const couponCode = null;
+  const discountAmount = 0;
   const [orderPreview, setOrderPreview] = useState<OrderPreview | null>(
     null
   );
@@ -143,16 +141,7 @@ const Cart = () => {
 
         {/* Right receipts column and Actions */}
         <aside className="space-y-6 lg:sticky lg:top-24">
-          <CouponInput
-            onCouponApply={setCouponCode}
-            onDiscountChange={setDiscountAmount}
-            orderAmount={
-              cart?.items.reduce(
-                (sum, item) => sum + item.price * item.quantity,
-                0
-              ) || 0
-            }
-          />
+
 
           {orderPreview && (
             <PriceBreakdown

@@ -2,7 +2,7 @@ package com.nexoracommerce.order.entity;
 
 import com.nexoracommerce.common.enums.OrderStatus;
 import com.nexoracommerce.coupon.entity.Coupon;
-import com.nexoracommerce.order.enums.PaymentStatus;
+import com.nexoracommerce.payment.enums.PaymentStatus;
 import com.nexoracommerce.user.entity.User;
 import jakarta.persistence.*;
 import org.hibernate.annotations.BatchSize;

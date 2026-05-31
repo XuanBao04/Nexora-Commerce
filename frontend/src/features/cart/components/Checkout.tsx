@@ -152,12 +152,21 @@ const Checkout = () => {
         cart.items.map((item) => buildOrderItemRequest(item)),
       );
 
+      
+      const combinedAddress = [
+        shippingAddress.shippingAddress.trim(),
+        shippingAddress.ward.trim() ? `Phường ${shippingAddress.ward.trim()}` : "",
+        shippingAddress.district.trim() ? `Quận ${shippingAddress.district.trim()}` : "",
+        shippingAddress.city.trim() ? `${shippingAddress.city.trim()}` : ""
+      ].filter(Boolean).join(", ");
+
       const orderRequest: OrderRequest = {
         userId,
         orderItems,
         couponCode: couponCode ?? undefined,
         paymentMethod,
         ...shippingAddress,
+        shippingAddress: combinedAddress,
       };
 
       const stockChecks = await Promise.all(

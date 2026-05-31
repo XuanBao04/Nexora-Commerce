@@ -8,20 +8,24 @@ import com.nexoracommerce.order.dto.request.OrderRequest;
 import com.nexoracommerce.order.dto.response.OrderResponse;
 import com.nexoracommerce.order.entity.Order;
 import com.nexoracommerce.order.entity.PaymentTransaction;
-import com.nexoracommerce.order.enums.PaymentMethod;
-import com.nexoracommerce.order.enums.TransactionStatus;
+import com.nexoracommerce.payment.enums.PaymentMethod;
+import com.nexoracommerce.payment.enums.TransactionStatus;
 import com.nexoracommerce.order.repository.OrderRepository;
 import com.nexoracommerce.order.repository.PaymentTransactionRepository;
 import com.nexoracommerce.order.service.IOrderService;
 import com.nexoracommerce.payment.service.PaymentRollbackService;
 import com.nexoracommerce.payment.service.VnPayService;
 import com.nexoracommerce.redis.service.RedisStockService;
-import com.nexoracommerce.order.enums.PaymentMethod;
-import com.nexoracommerce.order.enums.PaymentStatus;
+import com.nexoracommerce.payment.enums.PaymentStatus;
+import com.nexoracommerce.mail.service.MailService;
+import com.nexoracommerce.inventory.service.IInventoryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+
 
 /**
  * Checkout service that integrates Redis stock checking with order creation
@@ -44,6 +48,8 @@ public class CheckoutService implements ICheckoutService {
     private final PaymentRollbackService paymentRollbackService;
     private final OrderRepository orderRepository;
     private final VnPayService vnPayService;
+    private final MailService mailService;
+    private final IInventoryService inventoryService;
     /**
      * Checkout flow with Redis stock protection:
      * 1. Verify Redis stock available
@@ -160,15 +166,35 @@ public class CheckoutService implements ICheckoutService {
         paymentTransactionRepository.save(transaction);
         
         if (paymentSuccessful) {
-            // Payment succeeded - transition order to confirmed
-            order.setStatus(OrderStatus.CONFIRMED);
+            // Payment succeeded - keep order status as PENDING, but update payment status to PAID
+            order.setStatus(OrderStatus.PENDING);
             order.setPaymentStatus(PaymentStatus.PAID);
             orderRepository.save(order);
             log.info("Payment confirmed for order: orderId={}", orderId);
+            
+            if (TransactionSynchronizationManager.isActualTransactionActive()) {
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        try {
+                            mailService.sendOrderConfirmationEmail(orderId);
+                        } catch (Exception e) {
+                            log.error("Failed to send order confirmation email asynchronously for orderId: {}", orderId, e);
+                        }
+                    }
+                });
+            } else {
+                try {
+                    mailService.sendOrderConfirmationEmail(orderId);
+                } catch (Exception e) {
+                    log.error("Failed to trigger order confirmation email for orderId: {}", orderId, e);
+                }
+            }
+
             return new PaymentResponse(
                     orderId,
-                    OrderStatus.CONFIRMED.name(),
-                    "Payment processed successfully. Order confirmed."
+                    OrderStatus.PENDING.name(),
+                    "Payment processed successfully. Order is pending admin confirmation."
             );
         } else {
             // Payment failed - rollback stock

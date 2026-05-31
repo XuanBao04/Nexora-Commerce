@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef, useMemo } from "react";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { productService } from '../services/productService';
 import { categoryService } from '../services/categoryService';
 import { brandService } from '../services/brandService';
@@ -34,6 +35,8 @@ const ProductManagement = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const { page, size, pagination, setPage, updatePaginationData, isLoading, setIsLoading, error, setError } = useAdminPagination(10);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   // Search & Filter state
   const [searchTerm, setSearchTerm] = useState("");
@@ -333,20 +336,22 @@ const ProductManagement = () => {
     }
   };
 
-  const handleDeleteProduct = async (product: Product) => {
-    // Exact permission role matching role is already guarded by the central controller
-    // Direct safe confirmation without confirm dialog window bypasses, we ask clearly:
-    if (window.confirm(`Bạn có chắc muốn xóa sản phẩm "${product.name}" (${product.id})? Hành động này không thể hoàn tác!`)) {
-      setIsLoading(true);
-      try {
-        await productService.deleteProduct(product.id);
-        toast.success("Xóa sản phẩm thành công!");
-        fetchMetadataAndProducts();
-      } catch (err) {
-        toast.error("Lỗi xóa sản phẩm: " + (err as Error).message);
-      } finally {
-        setIsLoading(false);
-      }
+  const handleDeleteProduct = (product: Product) => {
+    setDeleteTarget(product);
+  };
+
+  const handleConfirmDeleteProduct = async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    try {
+      await productService.deleteProduct(deleteTarget.id);
+      toast.success("Xóa sản phẩm thành công!");
+      setDeleteTarget(null);
+      fetchMetadataAndProducts();
+    } catch (err) {
+      toast.error("Lỗi xóa sản phẩm: " + (err as Error).message);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -908,6 +913,19 @@ const ProductManagement = () => {
 
       {/* Pagination Controls */}
       <AdminPagination pagination={pagination} onPageChange={setPage} />
+
+      {/* Confirm Delete Modal */}
+      <ConfirmModal
+        isOpen={deleteTarget !== null}
+        title="Xóa sản phẩm"
+        message={`Bạn có chắc muốn xóa sản phẩm "${deleteTarget?.name}" (${deleteTarget?.id})? Hành động này không thể hoàn tác!`}
+        confirmLabel="Xóa sản phẩm"
+        cancelLabel="Hủy bỏ"
+        type="danger"
+        isLoading={isDeleting}
+        onConfirm={handleConfirmDeleteProduct}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 };

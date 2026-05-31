@@ -7,7 +7,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import com.nexoracommerce.common.validator.ValidPhoneNumber;
 import com.nexoracommerce.common.validator.ValidAddress;
-import com.nexoracommerce.order.enums.PaymentMethod;
+import com.nexoracommerce.payment.enums.PaymentMethod;
 import java.util.List;
 
 /**

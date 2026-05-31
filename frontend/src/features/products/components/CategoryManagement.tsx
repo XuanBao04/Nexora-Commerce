@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { categoryService } from "../services/categoryService";
 import { CategoryResponse, CategoryRequest } from "../types/product";
@@ -13,6 +14,7 @@ const CategoryManagement = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
 
   const { page, size, pagination, setPage, updatePaginationData, isLoading: paginatingLoading, setIsLoading, error: paginatingError, setError } = useAdminPagination(10);
 
@@ -140,8 +142,13 @@ const CategoryManagement = () => {
   };
 
   const handleDelete = (id: number, name: string) => {
-    if (window.confirm(`Bạn có chắc muốn xóa danh mục "${name}"?`)) {
-      deleteMutation.mutate(id);
+    setDeleteTarget({ id, name });
+  };
+
+  const handleConfirmDelete = () => {
+    if (deleteTarget) {
+      deleteMutation.mutate(deleteTarget.id);
+      setDeleteTarget(null);
     }
   };
 
@@ -331,6 +338,19 @@ const CategoryManagement = () => {
           <AdminPagination pagination={pagination} onPageChange={setPage} />
         </div>
       )}
+
+      {/* Confirm Delete Modal */}
+      <ConfirmModal
+        isOpen={deleteTarget !== null}
+        title="Xóa danh mục"
+        message={`Bạn có chắc muốn xóa danh mục "${deleteTarget?.name}"? Hành động này không thể hoàn tác.`}
+        confirmLabel="Xóa danh mục"
+        cancelLabel="Hủy bỏ"
+        type="danger"
+        isLoading={deleteMutation.isPending}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 };
