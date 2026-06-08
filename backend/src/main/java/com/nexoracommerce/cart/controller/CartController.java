@@ -3,7 +3,7 @@ package com.nexoracommerce.cart.controller;
 import com.nexoracommerce.cart.dto.request.CartItemRequest;
 import com.nexoracommerce.cart.dto.request.UpdateQuantityRequest;
 import com.nexoracommerce.cart.dto.response.CartResponse;
-import com.nexoracommerce.cart.service.ICartService;
+import com.nexoracommerce.cart.service.CartService;
 import com.nexoracommerce.common.response.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -30,7 +30,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @Tag(name = "Cart Module", description = "Endpoints for active user shopping carts, adding/removing items, and clearing carts")
 public class CartController {
 
-    private final ICartService cartService;
+    private final CartService cartService;
 
     @GetMapping("/{userId}")
     @PreAuthorize("hasRole('ADMIN') or @cartSecurity.isOwner(authentication, #userId)")

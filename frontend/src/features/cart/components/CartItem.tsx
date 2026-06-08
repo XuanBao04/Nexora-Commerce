@@ -19,7 +19,7 @@ const CartItem = ({ item, onRemove, onUpdateQuantity }: CartItemProps) => {
   );
   const [availableStock, setAvailableStock] = useState<number>(item.quantity);
 
-  // Sync local quantity state with prop changes from parent / store
+  // Đồng bộ số lượng cục bộ khi prop từ component cha thay đổi
   useEffect(() => {
     setQuantity(item.quantity);
   }, [item.quantity]);
@@ -56,7 +56,6 @@ const CartItem = ({ item, onRemove, onUpdateQuantity }: CartItemProps) => {
       className="grid grid-cols-[72px_1fr] gap-4 border-b border-zinc-100 py-6 last:border-b-0 sm:grid-cols-[80px_1fr_auto_auto] items-center"
       data-testid="cart-item"
     >
-      {/* High-End Image box */}
       <div className="flex h-[72px] w-[72px] items-center justify-center overflow-hidden rounded-xl border border-zinc-200/50 bg-zinc-50 sm:h-20 sm:w-20 transition hover:border-zinc-300">
         {productImageUrl ? (
           <img
@@ -80,7 +79,6 @@ const CartItem = ({ item, onRemove, onUpdateQuantity }: CartItemProps) => {
         </span>
       </div>
 
-      {/* Details Area */}
       <div className="min-w-0">
         <h3 className="line-clamp-1 text-sm font-extrabold text-zinc-950">
           {productName || "Đang tải dữ liệu..."}
@@ -93,7 +91,6 @@ const CartItem = ({ item, onRemove, onUpdateQuantity }: CartItemProps) => {
         </p>
       </div>
 
-      {/* Elegant Controls */}
       <div className="col-start-2 flex items-center bg-zinc-100 rounded-xl p-0.5 border border-zinc-200/50 sm:col-start-auto self-center justify-self-start sm:justify-self-center">
         <button
           onClick={() => handleQuantityChange(quantity - 1)}
@@ -122,7 +119,6 @@ const CartItem = ({ item, onRemove, onUpdateQuantity }: CartItemProps) => {
         </button>
       </div>
 
-      {/* Price matrix actions */}
       <div className="col-start-2 flex items-center justify-between gap-6 sm:col-start-auto sm:block sm:w-36 sm:text-right">
         <div>
           <p className="hidden text-base font-black text-zinc-950 sm:block">

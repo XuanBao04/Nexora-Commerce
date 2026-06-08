@@ -2,7 +2,7 @@ package com.nexoracommerce.brand.controller;
 
 import com.nexoracommerce.brand.dto.request.BrandRequest;
 import com.nexoracommerce.brand.dto.response.BrandResponse;
-import com.nexoracommerce.brand.service.IBrandService;
+import com.nexoracommerce.brand.service.BrandService;
 import com.nexoracommerce.common.response.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -35,7 +35,7 @@ import java.util.List;
 @Tag(name = "Brand Module", description = "Endpoints for product brands, brand catalog, and administration")
 public class BrandController {
 
-    private final IBrandService brandService;
+    private final BrandService brandService;
 
     @GetMapping
     @Operation(

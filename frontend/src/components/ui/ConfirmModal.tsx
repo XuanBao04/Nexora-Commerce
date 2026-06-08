@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { FaTimes, FaExclamationTriangle, FaCheckCircle, FaInfoCircle } from 'react-icons/fa';
 
 interface ConfirmModalProps {
@@ -93,7 +94,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
 
   const colors = getIconAndColors();
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/60 backdrop-blur-md p-4 animate-fade-in"
       onClick={handleBackdropClick}
@@ -161,6 +162,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

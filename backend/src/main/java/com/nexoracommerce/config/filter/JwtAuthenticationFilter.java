@@ -23,10 +23,6 @@ import org.springframework.web.servlet.HandlerExceptionResolver;
 
 import java.io.IOException;
 
-/**
- * JWT Authentication Filter — executed exactly once per HTTP request.
- * Delegates exceptions to GlobalExceptionHandler using HandlerExceptionResolver.
- */
 @Slf4j
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -70,12 +66,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 if (jwtService.isTokenValid(token, userDetails)) {
                     UsernamePasswordAuthenticationToken authToken =
                             new UsernamePasswordAuthenticationToken(
-                                    userDetails,
-                                    null,
-                                    userDetails.getAuthorities()
-                            );
+                                    userDetails, null, userDetails.getAuthorities());
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-
                     SecurityContextHolder.getContext().setAuthentication(authToken);
 
                     log.debug("[JWT] Authenticated user '{}' for {} {}",
@@ -96,11 +88,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private String extractTokenFromRequest(HttpServletRequest request) {
         final String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
-
         if (StringUtils.hasText(authHeader) && authHeader.startsWith(BEARER_PREFIX)) {
             return authHeader.substring(BEARER_PREFIX.length());
         }
-
         return null;
     }
 

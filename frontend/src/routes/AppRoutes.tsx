@@ -24,8 +24,8 @@ const LoginPage = lazy(() =>
 const RegisterPage = lazy(() =>
   import("@features/auth").then((m) => ({ default: m.RegisterPage }))
 );
-const Order = lazy(() =>
-  import("@features/orders").then((m) => ({ default: m.Order }))
+const OrderHistory = lazy(() =>
+  import("@features/orders").then((m) => ({ default: m.OrderHistory }))
 );
 const AdminDashboard = lazy(() =>
   import("@features/admin").then((m) => ({ default: m.AdminDashboard }))
@@ -142,7 +142,7 @@ export default function AppRoutes() {
             path={PATHS.SEGMENTS.ORDERS}
             element={
               <RequireAuth>
-                <Order />
+                <OrderHistory />
               </RequireAuth>
             }
           />

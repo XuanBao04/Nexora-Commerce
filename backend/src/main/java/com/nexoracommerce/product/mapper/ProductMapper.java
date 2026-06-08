@@ -26,24 +26,33 @@ public interface ProductMapper {
 
     Set<ProductResponse> toResponseSet(Set<Product> products);
 
+    default ProductVariantResponse toVariantResponse(ProductVariant v) {
+        if (v == null) {
+            return null;
+        }
+        return new ProductVariantResponse(
+                v.getSku(),
+                v.getProduct() != null ? v.getProduct().getName() : null,
+                v.getProduct() != null ? v.getProduct().getImageUrl() : null,
+                v.getPrice(),
+                v.getQuantity(),
+                v.getReservedQuantity(),
+                v.getSoldQuantity(),
+                v.getAttributeValues() == null ? List.of() : v.getAttributeValues().stream()
+                        .map(attrVal -> new ProductVariantAttributeResponse(
+                                attrVal.getAttribute().getName(),
+                                attrVal.getValue()
+                        ))
+                        .toList()
+        );
+    }
+
     default List<ProductVariantResponse> mapVariants(Map<String, ProductVariant> variants) {
         if (variants == null) {
             return List.of();
         }
         return variants.values().stream()
-                .map(v -> new ProductVariantResponse(
-                        v.getSku(),
-                        v.getPrice(),
-                        v.getQuantity(),
-                        v.getReservedQuantity(),
-                        v.getSoldQuantity(),
-                        v.getAttributeValues() == null ? List.of() : v.getAttributeValues().stream()
-                                .map(attrVal -> new ProductVariantAttributeResponse(
-                                        attrVal.getAttribute().getName(),
-                                        attrVal.getValue()
-                                ))
-                                .toList()
-                ))
+                .map(this::toVariantResponse)
                 .toList();
     }
 }

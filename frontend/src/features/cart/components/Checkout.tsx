@@ -13,6 +13,8 @@ import { Product } from "@/features/products/types/product";
 import { toast } from "react-toastify";
 import { FaArrowLeft, FaLock, FaMoneyBillWave, FaCreditCard } from "react-icons/fa";
 
+const PENDING_VNPAY_PAYMENT_KEY = "nexora_pending_vnpay_payment";
+
 const SHIPPING_FEE = 29900;
 
 type OrderPreview = {
@@ -187,13 +189,22 @@ const Checkout = () => {
       
       if (paymentMethod === 'VNPAY') {
         if (response.paymentUrl) {
-          window.location.href = response.paymentUrl;
+          sessionStorage.setItem(
+            PENDING_VNPAY_PAYMENT_KEY,
+            JSON.stringify({
+              orderId: response.id,
+              paymentUrl: response.paymentUrl,
+              totalPrice: response.totalPrice,
+              createdAt: new Date().toISOString(),
+            }),
+          );
+          navigate('/authenticated/checkout/result', { replace: true });
         } else {
           toast.error("Không thể tạo đường dẫn thanh toán.");
           navigate("/authenticated/orders");
         }
       } else {
-        // COD: Show success message
+        // COD: Hiển thị thông báo thành công
         toast.success("Đặt hàng thành công! Vui lòng chờ xác nhận.");
         navigate("/authenticated/orders");
       }
@@ -248,7 +259,6 @@ const Checkout = () => {
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:items-start">
-        {/* Left Form details */}
         <div className="space-y-6 lg:col-span-2">
           <AddressForm
             onAddressChange={setShippingAddress}
@@ -290,7 +300,6 @@ const Checkout = () => {
           </section>
         </div>
 
-        {/* Right receipts column and Actions */}
         <aside className="space-y-6 lg:sticky lg:top-24">
           <CouponInput
             onCouponApply={setCouponCode}

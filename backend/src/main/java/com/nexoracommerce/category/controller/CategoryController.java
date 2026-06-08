@@ -2,7 +2,7 @@ package com.nexoracommerce.category.controller;
 
 import com.nexoracommerce.category.dto.request.CategoryRequest;
 import com.nexoracommerce.category.dto.response.CategoryResponse;
-import com.nexoracommerce.category.service.ICategoryService;
+import com.nexoracommerce.category.service.CategoryService;
 import com.nexoracommerce.common.response.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -31,7 +31,7 @@ import java.util.List;
 @Tag(name = "Category Module", description = "Endpoints for category hierarchies, list retrieval, and administration")
 public class CategoryController {
 
-    private final ICategoryService categoryService;
+    private final CategoryService categoryService;
 
     @GetMapping
     @Operation(

@@ -3,8 +3,7 @@ package com.nexoracommerce.config.security;
 import com.nexoracommerce.config.filter.JwtAuthenticationFilter;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -29,12 +28,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+@Slf4j
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
-    private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
 
     @Value("${cors.allowed-origins:http://localhost:5173,http://localhost:3000}")
     private String corsAllowedOrigins;
@@ -47,29 +46,21 @@ public class SecurityConfig {
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(
-            AuthenticationConfiguration authConfig) throws Exception {
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
         return authConfig.getAuthenticationManager();
     }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                // CORS configuration
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-
-                // Disable CSRF as we use JWT (Stateless)
                 .csrf(AbstractHttpConfigurer::disable)
-
-                // Session management set to STATELESS
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-                // Authorization rules
+                // Phân quyền API
                 .authorizeHttpRequests(auth -> auth
-                        // Allow all OPTIONS requests for CORS preflight
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        // Public endpoints - no authentication required
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                         .requestMatchers("/api/v1/csrf-tokens").permitAll()
                         .requestMatchers(HttpMethod.POST,
@@ -78,6 +69,8 @@ public class SecurityConfig {
                                 "/api/v1/authentications/tokens").permitAll()
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/authentications/sessions").permitAll()
                         .requestMatchers("/api/v1/products/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/search").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/search/sync-embeddings").permitAll()
                         .requestMatchers("/api/v1/security-demos/**").permitAll()
                         .requestMatchers("/api/v1/payments/**").permitAll()
                         .requestMatchers("/api/v1/inventories/**").permitAll()
@@ -89,10 +82,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/checkouts/**").authenticated()
                         .requestMatchers("/h2-console/**").permitAll()
                         .requestMatchers(
-                                "/v3/api-docs",
-                                "/v3/api-docs/**",
-                                "/swagger-ui/**",
-                                "/swagger-ui.html"
+                                "/v3/api-docs", "/v3/api-docs/**",
+                                "/swagger-ui/**", "/swagger-ui.html",
+                                "/api/v3/api-docs", "/api/v3/api-docs/**",
+                                "/api/swagger-ui/**", "/api/swagger-ui.html"
                         ).permitAll()
                         .anyRequest().authenticated())
 
@@ -110,11 +103,7 @@ public class SecurityConfig {
                             response.getWriter().write("{\"success\":false,\"status\":403,\"message\":\"Bạn không có quyền truy cập.\"}");
                         }))
 
-                // Allow H2 Console frames
-                .headers(headers -> headers
-                        .frameOptions(frame -> frame.sameOrigin()))
-
-                // Add JWT filter
+                .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
@@ -122,21 +111,19 @@ public class SecurityConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        // Parse and trim allowed origins
         List<String> allowedOrigins = new ArrayList<>();
         for (String origin : corsAllowedOrigins.split(",")) {
-            String trimmedOrigin = origin.trim();
-            if (!trimmedOrigin.isEmpty()) {
-                allowedOrigins.add(trimmedOrigin);
+            String trimmed = origin.trim();
+            if (!trimmed.isEmpty()) {
+                allowedOrigins.add(trimmed);
             }
         }
 
-        logger.info("CORS allowed origins: {}", allowedOrigins);
+        log.info("CORS allowed origins: {}", allowedOrigins);
 
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(allowedOrigins);
-        configuration.setAllowedMethods(Arrays.asList(
-                "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
@@ -148,7 +135,6 @@ public class SecurityConfig {
 
     @Bean
     public CorsFilter corsFilter() {
-        logger.info("Creating CORS filter bean");
-        return new CorsFilter(java.util.Objects.requireNonNull(corsConfigurationSource()));
+        return new CorsFilter(corsConfigurationSource());
     }
 }

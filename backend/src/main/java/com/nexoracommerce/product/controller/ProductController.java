@@ -3,7 +3,7 @@ package com.nexoracommerce.product.controller;
 import com.nexoracommerce.common.response.ApiResponse;
 import com.nexoracommerce.product.dto.request.ProductFormRequest;
 import com.nexoracommerce.product.dto.response.ProductResponse;
-import com.nexoracommerce.product.service.IProductService;
+import com.nexoracommerce.product.service.ProductService;
 import jakarta.validation.Valid;
 
 import lombok.RequiredArgsConstructor;
@@ -41,7 +41,7 @@ import java.util.List;
 @Tag(name = "Product Module", description = "Endpoints for catalog, pricing, and variant administration")
 public class ProductController {
 
-    private final IProductService productService;
+    private final ProductService productService;
 
     @GetMapping
     @Operation(
@@ -59,7 +59,7 @@ public class ProductController {
             @RequestParam(required = false) Long maxPrice,
             @PageableDefault(size = 12, sort = "id", direction = Sort.Direction.ASC) Pageable pageable) {
         
-        // Hard limit protection against DoS (Max page size is 50, defaults to 12 if exceeded)
+        
         if (pageable.getPageSize() > 50) {
             pageable = PageRequest.of(pageable.getPageNumber(), 12, pageable.getSort());
         }

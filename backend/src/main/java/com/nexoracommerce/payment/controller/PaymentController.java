@@ -1,11 +1,11 @@
 package com.nexoracommerce.payment.controller;
-import com.nexoracommerce.checkout.service.ICheckoutService;
+import com.nexoracommerce.checkout.service.CheckoutService;
+import com.nexoracommerce.payment.config.VnPayConfig;
 import com.nexoracommerce.payment.service.VnPayService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -25,10 +25,8 @@ import java.util.Map;
 public class PaymentController {
 
     private final VnPayService vnPayService;
-    private final ICheckoutService checkoutService;
-
-    @Value("${vnpay.frontend-return-url:http://localhost:5173/authenticated/checkout/result}")
-    private String frontendReturnUrl;
+    private final VnPayConfig vnPayConfig;
+    private final CheckoutService checkoutService;
 
     @GetMapping("/vnpay/return")
     public ResponseEntity<Void> vnpayReturn(
@@ -44,7 +42,7 @@ public class PaymentController {
             result = "FAILED";
         }
 
-        UriComponentsBuilder redirectBuilder = UriComponentsBuilder.fromUriString(frontendReturnUrl);
+        UriComponentsBuilder redirectBuilder = UriComponentsBuilder.fromUriString(vnPayConfig.getFrontendReturnUrl());
         if (request.getQueryString() != null) {
             redirectBuilder.query(request.getQueryString());
         }

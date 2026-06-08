@@ -20,13 +20,35 @@ spring:
       mail:
         smtp:
           auth: true
+          connectiontimeout: ${MAIL_SMTP_CONNECTION_TIMEOUT:10000}
+          timeout: ${MAIL_SMTP_TIMEOUT:10000}
+          writetimeout: ${MAIL_SMTP_WRITE_TIMEOUT:10000}
           starttls:
             enable: true
             required: true
+  ai:
+    vertex:
+      ai:
+        gemini:
+          project-id: ${GEMINI_PROJECT_ID:default-project}
+          location: ${GEMINI_LOCATION:us-central1}
+          api-key: ${GEMINI_API_KEY}
+    vectorstore:
+      pgvector:
+        index-type: HNSW
+        distance-type: COSINE_DISTANCE
+        dimensions: 768
 
 
 server:
   port: ${SERVER_PORT:8080}
+
+springdoc:
+  api-docs:
+    path: /api/v3/api-docs
+  swagger-ui:
+    path: /api/swagger-ui.html
+    disable-swagger-default-url: true
 
 jwt:
   secret: ${JWT_SECRET}
@@ -42,6 +64,8 @@ cloudinary:
   api-secret: ${CLOUDINARY_API_SECRET}
 
 logging:
+  file:
+    name: app.log
   level:
     root: INFO
     com.nexoracommerce: INFO
@@ -51,4 +75,6 @@ vnpay:
   hash-secret: ${VNPAY_HASH_SECRET}
   pay-url: ${VNPAY_PAY_URL}
   return-url: ${VNPAY_RETURN_URL}
-  frontend-return-url: ${VNPAY_FRONTEND_RETURN_URL:http://localhost:5173/authenticated/checkout/result}
+  frontend-return-url: ${VNPAY_FRONTEND_RETURN_URL}
+
+

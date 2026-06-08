@@ -5,7 +5,7 @@ import com.nexoracommerce.statistic.dto.response.AdminDashboardSummaryResponse;
 import com.nexoracommerce.statistic.dto.response.BestSellerItem;
 import com.nexoracommerce.statistic.dto.response.OrderStatusStat;
 import com.nexoracommerce.statistic.dto.response.RevenueChartItem;
-import com.nexoracommerce.statistic.service.IAdminStatisticService;
+import com.nexoracommerce.statistic.service.AdminStatisticService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -25,7 +25,7 @@ import java.util.List;
 @Tag(name = "Admin Statistics Module", description = "Endpoints for admin to view business dashboard analytics")
 public class AdminStatisticController {
 
-    private final IAdminStatisticService statisticService;
+    private final AdminStatisticService statisticService;
 
     @GetMapping("/summary")
     @PreAuthorize("hasRole('ADMIN')")

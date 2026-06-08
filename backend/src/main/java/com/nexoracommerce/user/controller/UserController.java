@@ -5,7 +5,7 @@ import com.nexoracommerce.user.dto.request.UpdateProfileRequest;
 import com.nexoracommerce.user.dto.request.UserAddressRequest;
 import com.nexoracommerce.user.dto.response.UserAddressResponse;
 import com.nexoracommerce.user.dto.response.UserProfileResponse;
-import com.nexoracommerce.user.service.IUserService;
+import com.nexoracommerce.user.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -38,7 +38,7 @@ import java.util.UUID;
 @Tag(name = "User Module", description = "Endpoints for user profiles, addresses, and account management")
 public class UserController {
 
-    private final IUserService userService;
+    private final UserService userService;
 
     @GetMapping("/{userId}/profile")
     @PreAuthorize("hasRole('ADMIN') or @userSecurity.isOwner(authentication, #userId)")

@@ -1,6 +1,6 @@
 package com.nexoracommerce.payment.service;
 
-import com.nexoracommerce.inventory.service.IInventoryService;
+import com.nexoracommerce.inventory.service.InventoryService;
 import com.nexoracommerce.order.entity.Order;
 import com.nexoracommerce.order.entity.OrderItem;
 import com.nexoracommerce.product.entity.ProductVariant;
@@ -11,89 +11,53 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Service to handle payment failure scenarios
- * Restores stock in both Redis and Database
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class PaymentRollbackService {
 
-    private final IInventoryService inventoryService;
+    private final InventoryService inventoryService;
     private final RedisStockService redisStockService;
     private final ProductVariantRepository productVariantRepository;
-    
-    /**
-     * Rollbacks order payment:
-     * 1. Releases reserved stock back to available pool in DB
-     * 2. Increments stock counter in Redis
-     */
+
+    // Hoàn trả tồn kho DB + Redis khi thanh toán thất bại
     @Transactional
     public void rollbackPaymentFailure(Order order) {
-        log.warn("Rolling back payment failure for order: orderId={}, userId={}", 
-                order.getId(), order.getUser() != null ? order.getUser().getId().toString() : null);
-        
+        log.warn("Rolling back payment: orderId={}", order.getId());
+
         try {
             for (OrderItem item : order.getOrderItems()) {
-                rollbackOrderItemPayment(item.getVariant().getSku(), item.getQuantity());
+                rollbackOrderItem(item.getVariant().getSku(), item.getQuantity());
             }
-            log.info("Payment rollback completed for order: orderId={}", order.getId());
+            log.info("Payment rollback completed: orderId={}", order.getId());
         } catch (Exception e) {
-            log.error("Error during payment rollback for order: orderId={}", order.getId(), e);
-            // Log but don't throw - we need manual intervention for this case
+            log.error("Error during payment rollback: orderId={}", order.getId(), e);
         }
     }
-    
-    /**
-     * Rollbacks a single order item payment
-     */
-    private void rollbackOrderItemPayment(String variantSku, Integer quantity) {
-        try {
-            // 1. Release reserved stock in DB (back to available pool)
-            inventoryService.releaseStock(variantSku, quantity);
-            log.info("Released reserved stock in DB: variantSku={}, quantity={}", 
-                    variantSku, quantity);
-            
-            // 2. Increment stock in Redis
-            redisStockService.incrementStock(variantSku, quantity);
-            log.info("Incremented stock in Redis: variantSku={}, quantity={}", 
-                    variantSku, quantity);
-            
-        } catch (Exception e) {
-            log.error("Error rolling back order item: variantSku={}, quantity={}", 
-                    variantSku, quantity, e);
-            throw new RuntimeException("Payment rollback failed for variant: " + variantSku, e);
-        }
-    }
-    
-    /**
-     * Manually restore stock if rollback failed or needs to be retried
-     * Use this for manual fixing of stock inconsistencies
-     */
+
+    // Khôi phục tồn kho thủ công (dùng khi rollback tự động thất bại)
     @Transactional
     public void manuallyRestoreStock(String productId, Integer quantity) {
         log.warn("Manually restoring stock: productId={}, quantity={}", productId, quantity);
-        
+
+        ProductVariant variant = productVariantRepository.findBySku(productId)
+                .orElseThrow(() -> new IllegalArgumentException("Product variant not found: " + productId));
+
+        int currentReserved = variant.getReservedQuantity() != null ? variant.getReservedQuantity() : 0;
+        variant.setReservedQuantity(Math.max(0, currentReserved - quantity));
+        productVariantRepository.save(variant);
+
+        redisStockService.incrementStock(productId, quantity);
+        log.info("Stock manually restored: productId={}, quantity={}", productId, quantity);
+    }
+
+    private void rollbackOrderItem(String variantSku, Integer quantity) {
         try {
-            // Restore in DB
-            ProductVariant variant = productVariantRepository.findBySku(productId)
-                    .orElseThrow(() -> new IllegalArgumentException("Product variant not found: " + productId));
-            
-            int currentReserved = variant.getReservedQuantity() != null ? 
-                    variant.getReservedQuantity() : 0;
-            int newReserved = Math.max(0, currentReserved - quantity);
-            
-            variant.setReservedQuantity(newReserved);
-            productVariantRepository.save(variant);
-            
-            // Restore in Redis
-            redisStockService.incrementStock(productId, quantity);
-            
-            log.info("Stock manually restored: productId={}, quantity={}", productId, quantity);
+            inventoryService.releaseStock(variantSku, quantity);
+            redisStockService.incrementStock(variantSku, quantity);
         } catch (Exception e) {
-            log.error("Error manually restoring stock: productId={}", productId, e);
-            throw e;
+            log.error("Error rolling back item: sku={}, qty={}", variantSku, quantity, e);
+            throw new RuntimeException("Payment rollback failed for variant: " + variantSku, e);
         }
     }
 }

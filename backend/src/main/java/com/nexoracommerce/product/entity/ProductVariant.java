@@ -83,8 +83,8 @@ public class ProductVariant {
     @Builder.Default
     private Integer height = 0;
 
-    @Column(name = "embedding", columnDefinition = "vector(768)")
-    private float[] embedding; // Semantic Search vector (Gemini text-embedding-004)
+    @Column(name = "embedding", columnDefinition = "vector(768)", insertable = false, updatable = false)
+    private String embedding; // Semantic Search vector — read-only for JPA, writes via native query only
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(

@@ -1,8 +1,5 @@
 package com.nexoracommerce.constant;
 
-/**
- * Centralized constants for entity-related values.
- */
 public class EntityConstant {
 
     public static class Role {

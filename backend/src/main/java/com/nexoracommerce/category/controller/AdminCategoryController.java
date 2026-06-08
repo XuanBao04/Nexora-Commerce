@@ -1,7 +1,7 @@
 package com.nexoracommerce.category.controller;
 
 import com.nexoracommerce.category.dto.response.CategoryResponse;
-import com.nexoracommerce.category.service.ICategoryService;
+import com.nexoracommerce.category.service.CategoryService;
 import com.nexoracommerce.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -27,7 +27,7 @@ import java.util.List;
 @Tag(name = "Admin Category Module", description = "Endpoints for admin to manage categories")
 public class AdminCategoryController {
 
-    private final ICategoryService categoryService;
+    private final CategoryService categoryService;
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")

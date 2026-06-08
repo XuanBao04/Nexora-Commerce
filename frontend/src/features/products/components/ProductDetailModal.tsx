@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { Product, ProductVariant, ProductImage } from '../types/product';
 import { formatPrice } from '@features/cart/utils/priceCalculation';
 import { useCartStore } from '@/store/useCartStore';
@@ -16,6 +17,14 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
   const navigate = useNavigate();
   const [quantity, setQuantity] = useState(1);
   const [isAdding, setIsAdding] = useState(false);
+
+  // Disable background scrolling when modal is open
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, []);
 
   // SKU selection state
   const [selectedSku, setSelectedSku] = useState<string | null>(null);
@@ -117,7 +126,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
     }
   };
 
-  return (
+  return createPortal(
     <div 
       className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/60 backdrop-blur-md p-4 overflow-y-auto animate-fade-in"
       onClick={handleBackdropClick}
@@ -339,8 +348,9 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
             </button>
           </div>
         </div>
-
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
+

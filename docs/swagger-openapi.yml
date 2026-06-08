@@ -1,8 +1,8 @@
 openapi: 3.0.1
 info:
-  title: Nexora-Commerce REST API
-  description: E-Commerce high-performance RESTful API documentation for frontend
-    integration.
+  title: Tài liệu REST API Nexora-Commerce
+  description: Tài liệu RESTful API hiệu năng cao cho hệ thống thương mại điện tử
+    Nexora-Commerce phục vụ tích hợp frontend.
   contact:
     name: Nexora Core Dev Team
     email: dev@nexoracommerce.com
@@ -12,56 +12,118 @@ info:
   version: 1.0.0
 servers:
 - url: http://localhost:8080
-  description: Generated server url
+  description: Máy chủ phát triển cục bộ (Local Development Server)
 security:
 - bearerAuth: []
 tags:
-- name: Authentication Module
-  description: Endpoints for user session login, registration, token refresh, and
-    profiles
-- name: Product Module
-  description: Endpoints for catalog, pricing, and variant administration
-- name: Category Module
-  description: Endpoints for category hierarchies, list retrieval, and administration
-- name: Cart Module
-  description: Endpoints for active user shopping carts, adding/removing items, and
-    clearing carts
-- name: Order Module
-  description: Endpoints for order calculation previews, creation, user history listings,
-    cancellations, and status management
-- name: Admin Order Module
-  description: Endpoints for admin to manage orders
+- name: Quản lý Thương hiệu (Admin)
+  description: Các API dành cho quản trị viên để quản lý thương hiệu sản phẩm
+- name: Quản lý Kho hàng
+  description: Các API quản lý tồn kho, kiểm tra trạng thái khả dụng, giữ kho và các
+    thao tác kho của admin
+- name: Xác thực & Người dùng
+  description: Các API đăng nhập, đăng ký, làm mới token và thông tin phiên làm việc
+- name: Quản lý Sản phẩm (Admin)
+  description: Các API dành cho quản trị viên để quản lý danh mục và thông tin sản
+    phẩm
+- name: Thống kê & Báo cáo (Admin)
+  description: Các API dành cho quản trị viên để xem dữ liệu thống kê, biểu đồ doanh
+    thu và báo cáo bán hàng
+- name: Cổng Thanh toán
+  description: Các API nhận và xử lý phản hồi, webhook (IPN) từ cổng thanh toán đối
+    tác (VNPAY)
+- name: Danh mục Sản phẩm
+  description: Các API truy vấn danh sách danh mục và cấu trúc cây thư mục danh mục
+    sản phẩm
+- name: Giỏ hàng
+  description: Các API quản lý giỏ hàng của người dùng, bao gồm thêm, sửa, xóa sản
+    phẩm và xóa sạch giỏ
+- name: Tài khoản Người dùng
+  description: Các API cập nhật hồ sơ cá nhân và quản lý sổ địa chỉ của người dùng
+- name: Quản lý Thành viên (Admin)
+  description: Các API dành cho quản trị viên để quản lý danh sách người dùng và tài
+    khoản thành viên
+- name: Quản lý Đơn hàng (Admin)
+  description: Các API dành cho quản trị viên để theo dõi và cập nhật trạng thái các
+    đơn hàng
+- name: Đơn hàng Người dùng
+  description: Các API cho phép xem trước giá trị đơn hàng, đặt hàng, xem lịch sử
+    đơn hàng và hủy đơn hàng
+- name: Thanh toán & Đặt hàng
+  description: Các API xử lý quy trình thanh toán đặt hàng nâng cao kết hợp giữ kho
+    Redis và xác nhận giao dịch
+- name: Tìm kiếm thông minh AI
+  description: Các API tìm kiếm kết hợp ngữ nghĩa bằng vector embeddings AI và Full-Text
+    Search (RRF)
+- name: Sản phẩm
+  description: Các API truy cập danh sách và chi tiết sản phẩm dành cho khách hàng
+- name: Mã giảm giá
+  description: Các API áp dụng, kiểm tra tính hợp lệ và quản lý các mã giảm giá
+- name: Quản lý Danh mục (Admin)
+  description: Các API dành cho quản trị viên để thêm, sửa, xóa các danh mục sản phẩm
+- name: Thương hiệu
+  description: Các API truy vấn danh sách thương hiệu sản phẩm dành cho khách hàng
 paths:
   /api/v1/users/{userId}/profile:
     get:
       tags:
-      - user-controller
+      - Tài khoản Người dùng
+      summary: Lấy thông tin hồ sơ cá nhân
+      description: Truy xuất thông tin hồ sơ chi tiết của người dùng đã xác thực.
+        Yêu cầu ID người dùng khớp hoặc quyền ADMIN.
       operationId: getUserProfile
       parameters:
       - name: userId
         in: path
+        description: ID người dùng (UUID)
         required: true
         schema:
           type: string
           format: uuid
+        example: 550e8400-e29b-41d4-a716-446655440000
       responses:
-        '200':
-          description: OK
+        '403':
+          description: Không đủ quyền truy cập
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseUserProfileResponse'
+        '200':
+          description: Lấy thông tin tài khoản thành công
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseUserProfileResponse'
+        '401':
+          description: Mã xác thực JWT thiếu hoặc không hợp lệ
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseUserProfileResponse'
+        '404':
+          description: Không tìm thấy người dùng
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseUserProfileResponse'
+      security:
+      - bearerAuth: []
     put:
       tags:
-      - user-controller
+      - Tài khoản Người dùng
+      summary: Cập nhật hồ sơ cá nhân
+      description: Cập nhật thông tin hồ sơ người dùng như tên hiển thị, số điện thoại
+        hoặc email. Yêu cầu ID người dùng khớp hoặc quyền ADMIN.
       operationId: updateProfile
       parameters:
       - name: userId
         in: path
+        description: ID người dùng (UUID)
         required: true
         schema:
           type: string
           format: uuid
+        example: 550e8400-e29b-41d4-a716-446655440000
       requestBody:
         content:
           application/json:
@@ -70,29 +132,62 @@ paths:
         required: true
       responses:
         '200':
-          description: OK
+          description: Cập nhật thông tin tài khoản thành công
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseUserProfileResponse'
+        '403':
+          description: Không đủ quyền truy cập
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseUserProfileResponse'
+        '401':
+          description: Mã xác thực JWT thiếu hoặc không hợp lệ
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseUserProfileResponse'
+        '400':
+          description: Dữ liệu đầu vào không hợp lệ
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseUserProfileResponse'
+        '404':
+          description: Không tìm thấy người dùng
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseUserProfileResponse'
+      security:
+      - bearerAuth: []
   /api/v1/users/{userId}/addresses/{addressId}:
     put:
       tags:
-      - user-controller
+      - Tài khoản Người dùng
+      summary: Cập nhật địa chỉ nhận hàng
+      description: Chỉnh sửa thông tin chi tiết của địa chỉ nhận hàng đã lưu. Yêu
+        cầu ID người dùng khớp hoặc quyền ADMIN.
       operationId: updateAddress
       parameters:
       - name: userId
         in: path
+        description: ID người dùng (UUID)
         required: true
         schema:
           type: string
           format: uuid
+        example: 550e8400-e29b-41d4-a716-446655440000
       - name: addressId
         in: path
+        description: ID địa chỉ trong cơ sở dữ liệu
         required: true
         schema:
           type: integer
           format: int64
+        example: 1
       requestBody:
         content:
           application/json:
@@ -100,76 +195,129 @@ paths:
               $ref: '#/components/schemas/UserAddressRequest'
         required: true
       responses:
-        '200':
-          description: OK
+        '403':
+          description: Không đủ quyền truy cập
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseUserAddressResponse'
+        '200':
+          description: Cập nhật địa chỉ thành công
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseUserAddressResponse'
+        '401':
+          description: Mã xác thực JWT thiếu hoặc không hợp lệ
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseUserAddressResponse'
+        '400':
+          description: Dữ liệu đầu vào không hợp lệ
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseUserAddressResponse'
+        '404':
+          description: Không tìm thấy địa chỉ
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseUserAddressResponse'
+      security:
+      - bearerAuth: []
     delete:
       tags:
-      - user-controller
+      - Tài khoản Người dùng
+      summary: Xóa địa chỉ nhận hàng
+      description: Xóa một địa chỉ nhận hàng khỏi sổ địa chỉ của người dùng. Yêu cầu
+        ID người dùng khớp hoặc quyền ADMIN.
       operationId: deleteAddress
       parameters:
       - name: userId
         in: path
+        description: ID người dùng (UUID)
         required: true
         schema:
           type: string
           format: uuid
+        example: 550e8400-e29b-41d4-a716-446655440000
       - name: addressId
         in: path
+        description: ID địa chỉ trong cơ sở dữ liệu
         required: true
         schema:
           type: integer
           format: int64
+        example: 1
       responses:
-        '200':
-          description: OK
+        '403':
+          description: Không đủ quyền truy cập
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseVoid'
+        '200':
+          description: Xóa địa chỉ thành công
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+        '401':
+          description: Mã xác thực JWT thiếu hoặc không hợp lệ
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+        '404':
+          description: Không tìm thấy địa chỉ
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+      security:
+      - bearerAuth: []
   /api/v1/products/{productId}:
     get:
       tags:
-      - Product Module
-      summary: Retrieve product details by product ID
-      description: Fetches complete details for a single product catalog item by its
-        custom code.
+      - Sản phẩm
+      summary: Lấy chi tiết sản phẩm bằng ID
+      description: Truy xuất toàn bộ thông tin chi tiết của một sản phẩm trong danh
+        mục dựa theo mã sản phẩm duy nhất.
       operationId: getProductById
       parameters:
       - name: productId
         in: path
-        description: The unique product code
+        description: Mã sản phẩm duy nhất
         required: true
         schema:
           type: string
         example: P001
       responses:
         '200':
-          description: Product details retrieved successfully
+          description: Lấy chi tiết sản phẩm thành công
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseProductResponse'
         '404':
-          description: Product not found under the provided ID
+          description: Không tìm thấy sản phẩm dưới ID đã cung cấp
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseProductResponse'
     put:
       tags:
-      - Product Module
-      summary: Update an existing product item
-      description: Requires ADMIN role. Modifies properties and uploads/updates product
-        images.
+      - Sản phẩm
+      summary: Cập nhật thông tin sản phẩm
+      description: Yêu cầu quyền ADMIN. Cập nhật các thuộc tính của sản phẩm và tải
+        lên/thay đổi hình ảnh sản phẩm.
       operationId: updateProduct
       parameters:
       - name: productId
         in: path
-        description: The unique product code
+        description: Mã sản phẩm duy nhất
         required: true
         schema:
           type: string
@@ -181,31 +329,31 @@ paths:
           $ref: '#/components/schemas/ProductFormRequest'
       responses:
         '403':
-          description: Insufficient permissions (must be ADMIN)
+          description: Không đủ quyền hạn (yêu cầu vai trò ADMIN)
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseProductResponse'
         '400':
-          description: Input validation failed
+          description: Dữ liệu đầu vào không hợp lệ
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseProductResponse'
         '404':
-          description: Product not found
+          description: Không tìm thấy sản phẩm
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseProductResponse'
         '401':
-          description: Authentication token missing or invalid
+          description: Mã xác thực JWT thiếu hoặc không hợp lệ
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseProductResponse'
         '200':
-          description: Product successfully updated
+          description: Cập nhật sản phẩm thành công
           content:
             '*/*':
               schema:
@@ -214,40 +362,40 @@ paths:
       - bearerAuth: []
     delete:
       tags:
-      - Product Module
-      summary: Delete a single product item
-      description: Requires ADMIN role. Permanently removes a product from the database
-        catalog.
+      - Sản phẩm
+      summary: Xóa một sản phẩm
+      description: Yêu cầu quyền ADMIN. Xóa vĩnh viễn sản phẩm khỏi danh mục trong
+        cơ sở dữ liệu.
       operationId: deleteProduct
       parameters:
       - name: productId
         in: path
-        description: The unique product code
+        description: Mã sản phẩm duy nhất
         required: true
         schema:
           type: string
         example: P001
       responses:
         '403':
-          description: Insufficient permissions (must be ADMIN)
+          description: Không đủ quyền hạn (yêu cầu vai trò ADMIN)
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseVoid'
         '404':
-          description: Product not found
+          description: Không tìm thấy sản phẩm
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseVoid'
         '401':
-          description: Authentication token missing or invalid
+          description: Mã xác thực JWT thiếu hoặc không hợp lệ
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseVoid'
         '200':
-          description: Product deleted successfully
+          description: Xóa sản phẩm thành công
           content:
             '*/*':
               schema:
@@ -257,31 +405,47 @@ paths:
   /api/v1/coupons/{code}:
     get:
       tags:
-      - coupon-controller
+      - Mã giảm giá
+      summary: Lấy chi tiết mã giảm giá bằng mã
+      description: Truy xuất thông tin chi tiết của mã giảm giá bao gồm loại giảm
+        giá, giá trị giảm, giới hạn và ngày hết hạn.
       operationId: getCoupon
       parameters:
       - name: code
         in: path
+        description: Mã giảm giá duy nhất
         required: true
         schema:
           type: string
+        example: WELCOME10
       responses:
+        '404':
+          description: Không tìm thấy mã giảm giá
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseCouponResponse'
         '200':
-          description: OK
+          description: Lấy chi tiết mã giảm giá thành công
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseCouponResponse'
     put:
       tags:
-      - coupon-controller
+      - Mã giảm giá
+      summary: Cập nhật mã giảm giá (Chỉ Admin)
+      description: Yêu cầu quyền ADMIN. Thay đổi các thuộc tính của mã giảm giá như
+        giá trị chiết khấu, hạn dùng hoặc giới hạn lượt dùng.
       operationId: updateCoupon
       parameters:
       - name: code
         in: path
+        description: Mã giảm giá cần cập nhật
         required: true
         schema:
           type: string
+        example: WELCOME10
       requestBody:
         content:
           application/json:
@@ -290,40 +454,90 @@ paths:
         required: true
       responses:
         '200':
-          description: OK
+          description: Cập nhật mã giảm giá thành công
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseCouponResponse'
+        '403':
+          description: Không đủ quyền hạn (yêu cầu vai trò ADMIN)
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseCouponResponse'
+        '401':
+          description: Mã xác thực JWT thiếu hoặc không hợp lệ
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseCouponResponse'
+        '400':
+          description: Dữ liệu đầu vào không hợp lệ
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseCouponResponse'
+        '404':
+          description: Không tìm thấy mã giảm giá
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseCouponResponse'
+      security:
+      - bearerAuth: []
     delete:
       tags:
-      - coupon-controller
+      - Mã giảm giá
+      summary: Xóa mã giảm giá (Chỉ Admin)
+      description: Yêu cầu quyền ADMIN. Xóa vĩnh viễn mã giảm giá khỏi hệ thống.
       operationId: deleteCoupon
       parameters:
       - name: code
         in: path
+        description: Mã giảm giá cần xóa
         required: true
         schema:
           type: string
+        example: WELCOME10
       responses:
-        '200':
-          description: OK
+        '403':
+          description: Không đủ quyền hạn (yêu cầu vai trò ADMIN)
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseVoid'
+        '200':
+          description: Xóa mã giảm giá thành công
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+        '401':
+          description: Mã xác thực JWT thiếu hoặc không hợp lệ
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+        '404':
+          description: Không tìm thấy mã giảm giá
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+      security:
+      - bearerAuth: []
   /api/v1/categories/{categoryId}:
     put:
       tags:
-      - Category Module
-      summary: Update an existing category
-      description: Requires ADMIN role. Edits details such as category name, icon,
-        slug, or parent reference.
+      - Danh mục Sản phẩm
+      summary: Cập nhật danh mục sản phẩm
+      description: Yêu cầu quyền ADMIN. Chỉnh sửa thông tin danh mục như tên danh
+        mục, biểu tượng, đường dẫn slug hoặc danh mục cha.
       operationId: updateCategory
       parameters:
       - name: categoryId
         in: path
-        description: Category database ID
+        description: ID danh mục trong cơ sở dữ liệu
         required: true
         schema:
           type: integer
@@ -337,31 +551,31 @@ paths:
         required: true
       responses:
         '400':
-          description: Input validation parameters failed
+          description: Tham số đầu vào không hợp lệ
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseCategoryResponse'
         '200':
-          description: Category successfully updated
+          description: Cập nhật danh mục thành công
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseCategoryResponse'
         '404':
-          description: Category not found
+          description: Không tìm thấy danh mục
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseCategoryResponse'
         '401':
-          description: Authentication token missing or invalid
+          description: Mã xác thực JWT thiếu hoặc không hợp lệ
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseCategoryResponse'
         '403':
-          description: Insufficient role permissions (must be ADMIN)
+          description: Không đủ quyền hạn (yêu cầu vai trò ADMIN)
           content:
             '*/*':
               schema:
@@ -370,15 +584,15 @@ paths:
       - bearerAuth: []
     delete:
       tags:
-      - Category Module
-      summary: Delete an existing category
-      description: Requires ADMIN role. Permanently removes a category and unbinds
-        its children.
+      - Danh mục Sản phẩm
+      summary: Xóa danh mục sản phẩm
+      description: Yêu cầu quyền ADMIN. Xóa vĩnh viễn danh mục và hủy các liên kết
+        với các danh mục con liên quan.
       operationId: deleteCategory
       parameters:
       - name: categoryId
         in: path
-        description: Category database ID
+        description: ID danh mục trong cơ sở dữ liệu
         required: true
         schema:
           type: integer
@@ -386,25 +600,25 @@ paths:
         example: 12
       responses:
         '404':
-          description: Category not found
+          description: Không tìm thấy danh mục
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseVoid'
         '401':
-          description: Authentication token missing or invalid
+          description: Mã xác thực JWT thiếu hoặc không hợp lệ
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseVoid'
         '403':
-          description: Insufficient role permissions (must be ADMIN)
+          description: Không đủ quyền hạn (yêu cầu vai trò ADMIN)
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseVoid'
         '200':
-          description: Category deleted successfully
+          description: Xóa danh mục thành công
           content:
             '*/*':
               schema:
@@ -414,15 +628,20 @@ paths:
   /api/v1/brands/{brandId}:
     put:
       tags:
-      - brand-controller
+      - Thương hiệu
+      summary: Cập nhật thương hiệu (Chỉ Admin)
+      description: Yêu cầu quyền ADMIN. Thay đổi các thuộc tính của thương hiệu bao
+        gồm tên, logo hoặc đường dẫn slug.
       operationId: updateBrand
       parameters:
       - name: brandId
         in: path
+        description: ID thương hiệu trong cơ sở dữ liệu
         required: true
         schema:
           type: integer
           format: int64
+        example: 1
       requestBody:
         content:
           application/json:
@@ -430,30 +649,80 @@ paths:
               $ref: '#/components/schemas/BrandRequest'
         required: true
       responses:
-        '200':
-          description: OK
+        '403':
+          description: Không đủ quyền hạn (yêu cầu vai trò ADMIN)
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseBrandResponse'
+        '200':
+          description: Cập nhật thương hiệu thành công
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseBrandResponse'
+        '404':
+          description: Không tìm thấy thương hiệu
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseBrandResponse'
+        '401':
+          description: Mã xác thực JWT thiếu hoặc không hợp lệ
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseBrandResponse'
+        '400':
+          description: Dữ liệu đầu vào không hợp lệ
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseBrandResponse'
+      security:
+      - bearerAuth: []
     delete:
       tags:
-      - brand-controller
+      - Thương hiệu
+      summary: Xóa thương hiệu (Chỉ Admin)
+      description: Yêu cầu quyền ADMIN. Xóa vĩnh viễn thương hiệu khỏi hệ thống.
       operationId: deleteBrand
       parameters:
       - name: brandId
         in: path
+        description: ID thương hiệu trong cơ sở dữ liệu
         required: true
         schema:
           type: integer
           format: int64
+        example: 1
       responses:
-        '200':
-          description: OK
+        '403':
+          description: Không đủ quyền hạn (yêu cầu vai trò ADMIN)
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseVoid'
+        '200':
+          description: Xóa thương hiệu thành công
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+        '404':
+          description: Không tìm thấy thương hiệu
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+        '401':
+          description: Mã xác thực JWT thiếu hoặc không hợp lệ
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+      security:
+      - bearerAuth: []
   /api/v1/admin/stocks/{productId}:
     get:
       tags:
@@ -467,11 +736,14 @@ paths:
           type: string
       responses:
         '200':
-          description: OK
+          description: Thành công
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseStockStatus'
+      summary: Lấy chi tiết tồn kho sản phẩm trong Redis
+      description: Yêu cầu quyền ADMIN. Lấy thông tin tồn kho thực tế và trạng thái
+        khóa của sản phẩm từ bộ nhớ tạm Redis.
     put:
       tags:
       - admin-stock-controller
@@ -490,11 +762,14 @@ paths:
         required: true
       responses:
         '200':
-          description: OK
+          description: Thành công
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseVoid'
+      summary: Thiết lập số lượng tồn kho sản phẩm trong Redis
+      description: Yêu cầu quyền ADMIN. Cập nhật và lưu trực tiếp số lượng tồn kho
+        của một sản phẩm trong bộ nhớ tạm Redis.
     delete:
       tags:
       - admin-stock-controller
@@ -507,65 +782,102 @@ paths:
           type: string
       responses:
         '200':
-          description: OK
+          description: Thành công
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseVoid'
-  /api/v1/wishlists/{userId}/items:
-    post:
+      summary: Xóa dữ liệu tồn kho sản phẩm trong Redis
+      description: Yêu cầu quyền ADMIN. Xóa bản ghi dữ liệu tồn kho của sản phẩm khỏi
+        bộ nhớ tạm Redis.
+  /api/v1/admin/orders/{orderId}/status:
+    put:
       tags:
-      - wishlist-controller
-      operationId: addToWishlist
+      - Quản lý Đơn hàng (Admin)
+      summary: Cập nhật trạng thái đơn hàng (Admin)
+      description: Yêu cầu quyền ADMIN. Cập nhật trạng thái xử lý chính thức của một
+        đơn hàng.
+      operationId: updateOrderStatus
       parameters:
-      - name: userId
+      - name: orderId
         in: path
         required: true
         schema:
           type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/WishlistRequest'
+      - name: status
+        in: query
         required: true
+        schema:
+          type: string
       responses:
         '200':
-          description: OK
+          description: Thành công
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/ApiResponseWishlistResponse'
+                $ref: '#/components/schemas/ApiResponseOrderResponse'
+      security:
+      - bearerAuth: []
   /api/v1/users/{userId}/addresses:
     get:
       tags:
-      - user-controller
+      - Tài khoản Người dùng
+      summary: Lấy danh sách địa chỉ đã lưu
+      description: Lấy toàn bộ danh sách địa chỉ nhận hàng đã lưu của người dùng.
+        Yêu cầu ID người dùng khớp hoặc quyền ADMIN.
       operationId: getUserAddresses
       parameters:
       - name: userId
         in: path
+        description: ID người dùng (UUID)
         required: true
         schema:
           type: string
           format: uuid
+        example: 550e8400-e29b-41d4-a716-446655440000
       responses:
         '200':
-          description: OK
+          description: Lấy danh sách địa chỉ thành công
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseListUserAddressResponse'
+        '403':
+          description: Không đủ quyền truy cập
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseListUserAddressResponse'
+        '401':
+          description: Mã xác thực JWT thiếu hoặc không hợp lệ
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseListUserAddressResponse'
+        '404':
+          description: Không tìm thấy người dùng
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseListUserAddressResponse'
+      security:
+      - bearerAuth: []
     post:
       tags:
-      - user-controller
+      - Tài khoản Người dùng
+      summary: Thêm địa chỉ nhận hàng mới
+      description: Thêm một địa chỉ nhận hàng mới vào sổ địa chỉ của người dùng. Yêu
+        cầu ID người dùng khớp hoặc quyền ADMIN.
       operationId: addUserAddress
       parameters:
       - name: userId
         in: path
+        description: ID người dùng (UUID)
         required: true
         schema:
           type: string
           format: uuid
+        example: 550e8400-e29b-41d4-a716-446655440000
       requestBody:
         content:
           application/json:
@@ -573,70 +885,109 @@ paths:
               $ref: '#/components/schemas/UserAddressRequest'
         required: true
       responses:
-        '200':
-          description: OK
+        '403':
+          description: Không đủ quyền truy cập
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseUserAddressResponse'
-  /api/v1/reviews:
-    post:
-      tags:
-      - product-review-controller
-      operationId: createReview
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ProductReviewRequest'
-        required: true
-      responses:
-        '200':
-          description: OK
+        '401':
+          description: Mã xác thực JWT thiếu hoặc không hợp lệ
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/ApiResponseProductReviewResponse'
+                $ref: '#/components/schemas/ApiResponseUserAddressResponse'
+        '400':
+          description: Dữ liệu đầu vào không hợp lệ
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseUserAddressResponse'
+        '404':
+          description: Không tìm thấy người dùng
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseUserAddressResponse'
+        '201':
+          description: Thêm địa chỉ thành công
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseUserAddressResponse'
+      security:
+      - bearerAuth: []
+  /api/v1/search/sync-embeddings:
+    post:
+      tags:
+      - Tìm kiếm thông minh AI
+      summary: Đồng bộ hóa dữ liệu Vector và Tìm kiếm
+      description: Chạy một tiến trình nền để tạo vector nhúng (embeddings) và dữ
+        liệu tìm kiếm toàn văn TSVector cho toàn bộ biến thể sản phẩm hiện có.
+      operationId: syncEmbeddings
+      responses:
+        '200':
+          description: Thành công
+          content:
+            '*/*':
+              schema:
+                type: string
   /api/v1/products:
     get:
       tags:
-      - Product Module
-      summary: Search products by keyword
-      description: Performs a text-based fuzzy search for products containing the
-        keyword in their name or description.
-      operationId: getAllProducts_1
+      - Sản phẩm
+      summary: Lấy danh sách sản phẩm với bộ lọc và tìm kiếm
+      description: Lấy danh sách sản phẩm phân trang, mặc định sắp xếp theo ID tăng
+        dần. Hỗ trợ lọc theo danh mục, thương hiệu và tìm kiếm mờ theo từ khóa.
+      operationId: getAllProducts
       parameters:
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: categoryId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: brandId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: minPrice
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: maxPrice
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
       - name: pageable
         in: query
         required: true
         schema:
           $ref: '#/components/schemas/Pageable'
-      - name: keyword
-        in: query
-        description: Search phrase or term
-        required: true
-        schema:
-          type: string
-        example: iPhone
       responses:
         '200':
-          description: Search results page retrieved successfully
-          content:
-            '*/*':
-              schema:
-                $ref: '#/components/schemas/ApiResponseListProductResponse'
-        '400':
-          description: Missing or empty keyword parameter
+          description: Lấy danh sách trang sản phẩm thành công
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseListProductResponse'
     post:
       tags:
-      - Product Module
-      summary: Create a new product item
-      description: Requires ADMIN role. Stores a new product entry along with multipart
-        image file attachments.
+      - Sản phẩm
+      summary: Tạo sản phẩm mới
+      description: Yêu cầu quyền ADMIN. Khởi tạo một sản phẩm mới trong danh mục cùng
+        các tệp hình ảnh tải lên ở định dạng multipart/form-data.
       operationId: createProduct
       parameters:
       - name: request
@@ -646,25 +997,25 @@ paths:
           $ref: '#/components/schemas/ProductFormRequest'
       responses:
         '403':
-          description: Insufficient permissions (must be ADMIN)
+          description: Không đủ quyền hạn (yêu cầu vai trò ADMIN)
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseProductResponse'
         '400':
-          description: Input validation failed
+          description: Dữ liệu đầu vào không hợp lệ
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseProductResponse'
         '201':
-          description: Product successfully created
+          description: Tạo sản phẩm thành công
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseProductResponse'
         '401':
-          description: Authentication token missing or invalid
+          description: Mã xác thực JWT thiếu hoặc không hợp lệ
           content:
             '*/*':
               schema:
@@ -673,14 +1024,14 @@ paths:
       - bearerAuth: []
     delete:
       tags:
-      - Product Module
-      summary: Bulk delete products (Disabled)
-      description: Requires ADMIN role. Always fails with a 403 status to prevent
-        bulk deletion accidents.
+      - Sản phẩm
+      summary: Xóa hàng loạt sản phẩm (Đã vô hiệu hóa)
+      description: Yêu cầu quyền ADMIN. Hành động này bị vô hiệu hóa an toàn và luôn
+        trả về lỗi 403 để tránh tai nạn xóa toàn bộ danh mục sản phẩm.
       operationId: deleteAllProducts
       responses:
         '403':
-          description: Bulk deletion is disabled for safety
+          description: Tính năng xóa hàng loạt đã bị vô hiệu hóa để đảm bảo an toàn
           content:
             '*/*':
               schema:
@@ -690,10 +1041,10 @@ paths:
   /api/v1/orders:
     get:
       tags:
-      - Order Module
-      summary: List customer-specific order history
-      description: Fetches a paginated history list of orders for a specific user
-        ID. Requires matching userId or ADMIN role.
+      - Đơn hàng Người dùng
+      summary: Lấy lịch sử đơn hàng của khách hàng
+      description: Lấy danh sách lịch sử đơn hàng đã đặt phân trang của người dùng
+        cụ thể. Yêu cầu ID người dùng khớp hoặc quyền ADMIN.
       operationId: getAllOrders_1
       parameters:
       - name: pageable
@@ -703,26 +1054,26 @@ paths:
           $ref: '#/components/schemas/Pageable'
       - name: userId
         in: query
-        description: Customer ID associated with orders
+        description: ID khách hàng liên kết với các đơn hàng
         required: true
         schema:
           type: string
         example: USR-001
       responses:
         '403':
-          description: Insufficient permissions
+          description: Không đủ quyền truy cập
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseListOrderResponse'
         '200':
-          description: Customer orders page retrieved successfully
+          description: Lấy danh sách trang đơn hàng của khách hàng thành công
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseListOrderResponse'
         '401':
-          description: Authentication token missing or invalid
+          description: Mã xác thực JWT thiếu hoặc không hợp lệ
           content:
             '*/*':
               schema:
@@ -731,10 +1082,10 @@ paths:
       - bearerAuth: []
     post:
       tags:
-      - Order Module
-      summary: Create a new checkout order
-      description: Processes shopping cart details and creates a pending checkout
-        transaction. Requires matching userId or ADMIN role.
+      - Đơn hàng Người dùng
+      summary: Tạo đơn hàng đặt trước
+      description: Xử lý chi tiết giỏ hàng hiện tại và tạo một giao dịch đặt hàng
+        chờ thanh toán. Yêu cầu ID người dùng khớp hoặc quyền ADMIN.
       operationId: createOrder
       requestBody:
         content:
@@ -744,25 +1095,25 @@ paths:
         required: true
       responses:
         '201':
-          description: Order successfully created
+          description: Tạo đơn hàng thành công
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseOrderResponse'
         '403':
-          description: Insufficient role permissions
+          description: Không đủ quyền truy cập
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseOrderResponse'
         '400':
-          description: Validation parameters failed or cart empty
+          description: Tham số không hợp lệ hoặc giỏ hàng trống
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseOrderResponse'
         '401':
-          description: Authentication token missing or invalid
+          description: Mã xác thực JWT thiếu hoặc không hợp lệ
           content:
             '*/*':
               schema:
@@ -772,10 +1123,11 @@ paths:
   /api/v1/orders/previews:
     post:
       tags:
-      - Order Module
-      summary: Generate an order pricing calculation preview
-      description: Computes subtotal, coupon discounts, shipping costs, and final
-        totals before actual placement. Does not alter cart state.
+      - Đơn hàng Người dùng
+      summary: Xem trước tính toán giá trị đơn hàng
+      description: Tính toán chi tiết các chi phí tạm tính, giảm giá từ coupon, phí
+        vận chuyển và tổng thanh toán trước khi đặt hàng chính thức. Không làm thay
+        đổi giỏ hàng.
       operationId: previewOrder
       requestBody:
         content:
@@ -785,25 +1137,25 @@ paths:
         required: true
       responses:
         '400':
-          description: Input validation failed
+          description: Dữ liệu đầu vào không hợp lệ
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseOrderPreviewResponse'
         '200':
-          description: Pricing preview computed successfully
+          description: Tính toán xem trước đơn hàng thành công
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseOrderPreviewResponse'
         '403':
-          description: Insufficient role permissions
+          description: Không đủ quyền truy cập
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseOrderPreviewResponse'
         '401':
-          description: Authentication token missing or invalid
+          description: Mã xác thực JWT thiếu hoặc không hợp lệ
           content:
             '*/*':
               schema:
@@ -813,14 +1165,20 @@ paths:
   /api/v1/inventories/{productId}/stock-reservations:
     post:
       tags:
-      - inventory-controller
+      - Quản lý Kho hàng
+      summary: Giữ kho cho đơn hàng chờ (Chỉ Admin)
+      description: Yêu cầu quyền ADMIN. Tạm giữ một số lượng hàng cụ thể từ kho khả
+        dụng cho một đơn hàng đang chờ xử lý. Số lượng bị giữ sẽ không hiển thị bán
+        cho người khác.
       operationId: reserveStock
       parameters:
       - name: productId
         in: path
+        description: Mã sản phẩm duy nhất
         required: true
         schema:
           type: string
+        example: P001
       requestBody:
         content:
           application/json:
@@ -828,23 +1186,54 @@ paths:
               $ref: '#/components/schemas/UpdateStockRequest'
         required: true
       responses:
-        '200':
-          description: OK
+        '403':
+          description: Không đủ quyền hạn (yêu cầu vai trò ADMIN)
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseVoid'
+        '400':
+          description: Không đủ hàng tồn kho hoặc yêu cầu không hợp lệ
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+        '404':
+          description: Không tìm thấy sản phẩm
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+        '401':
+          description: Mã xác thực JWT thiếu hoặc không hợp lệ
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+        '200':
+          description: Giữ kho thành công
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+      security:
+      - bearerAuth: []
   /api/v1/inventories/{productId}/stock-releases:
     post:
       tags:
-      - inventory-controller
+      - Quản lý Kho hàng
+      summary: Hoàn trả hàng giữ kho về kho khả dụng (Chỉ Admin)
+      description: Yêu cầu quyền ADMIN. Hoàn trả số lượng hàng đang bị tạm giữ về
+        lại kho khả dụng. Sử dụng khi đơn hàng bị hủy hoặc giao dịch thất bại.
       operationId: releaseStock
       parameters:
       - name: productId
         in: path
+        description: Mã sản phẩm duy nhất
         required: true
         schema:
           type: string
+        example: P001
       requestBody:
         content:
           application/json:
@@ -852,27 +1241,74 @@ paths:
               $ref: '#/components/schemas/UpdateStockRequest'
         required: true
       responses:
-        '200':
-          description: OK
+        '403':
+          description: Không đủ quyền hạn (yêu cầu vai trò ADMIN)
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseVoid'
+        '400':
+          description: Yêu cầu giải phóng kho không hợp lệ hoặc không đủ số lượng
+            đã giữ
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+        '200':
+          description: Giải phóng hàng giữ kho thành công
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+        '404':
+          description: Không tìm thấy sản phẩm
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+        '401':
+          description: Mã xác thực JWT thiếu hoặc không hợp lệ
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+      security:
+      - bearerAuth: []
   /api/v1/coupons:
     get:
       tags:
-      - coupon-controller
+      - Mã giảm giá
+      summary: Danh sách toàn bộ mã giảm giá (Chỉ Admin)
+      description: Yêu cầu quyền ADMIN. Lấy danh sách tất cả các mã giảm giá đang
+        tồn tại trong hệ thống.
       operationId: getAllCoupons
       responses:
-        '200':
-          description: OK
+        '403':
+          description: Không đủ quyền hạn (yêu cầu vai trò ADMIN)
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseListCouponResponse'
+        '200':
+          description: Lấy danh sách mã giảm giá thành công
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseListCouponResponse'
+        '401':
+          description: Mã xác thực JWT thiếu hoặc không hợp lệ
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseListCouponResponse'
+      security:
+      - bearerAuth: []
     post:
       tags:
-      - coupon-controller
+      - Mã giảm giá
+      summary: Tạo mã giảm giá mới (Chỉ Admin)
+      description: Yêu cầu quyền ADMIN. Khởi tạo một mã giảm giá mới kèm theo cấu
+        hình loại chiết khấu, giới hạn sử dụng.
       operationId: createCoupon
       requestBody:
         content:
@@ -881,16 +1317,41 @@ paths:
               $ref: '#/components/schemas/CreateCouponRequest'
         required: true
       responses:
-        '200':
-          description: OK
+        '403':
+          description: Không đủ quyền hạn (yêu cầu vai trò ADMIN)
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseCouponResponse'
+        '400':
+          description: Lỗi dữ liệu hoặc mã giảm giá đã tồn tại
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseCouponResponse'
+        '201':
+          description: Tạo mã giảm giá thành công
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseCouponResponse'
+        '401':
+          description: Mã xác thực JWT thiếu hoặc không hợp lệ
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseCouponResponse'
+      security:
+      - bearerAuth: []
   /api/v1/checkouts:
     post:
       tags:
-      - checkout-controller
+      - Thanh toán & Đặt hàng
+      summary: Khởi tạo thanh toán và đặt hàng
+      description: Xử lý đặt hàng nâng cao kết hợp cơ chế kiểm tra và giữ kho nguyên
+        tử bằng Redis để chống hiện tượng mua vượt quá tồn kho (overselling). Khởi
+        tạo đơn hàng tạm tính và cung cấp phương thức thanh toán thích hợp (Hỗ trợ
+        COD và VNPAY).
       operationId: checkout
       requestBody:
         content:
@@ -899,23 +1360,56 @@ paths:
               $ref: '#/components/schemas/OrderRequest'
         required: true
       responses:
-        '200':
-          description: OK
+        '201':
+          description: Tạo đơn hàng thành công, cung cấp URL thanh toán nếu có
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseOrderResponse'
+        '403':
+          description: Không đủ quyền truy cập
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseOrderResponse'
+        '400':
+          description: Lỗi dữ liệu hoặc không đủ hàng tồn kho
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseOrderResponse'
+        '401':
+          description: Mã xác thực JWT thiếu hoặc không hợp lệ
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseOrderResponse'
+        '409':
+          description: Xung đột đặt hàng - tồn kho đã được giữ hoặc đơn hàng đã tồn
+            tại
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseOrderResponse'
+      security:
+      - bearerAuth: []
   /api/v1/checkouts/orders/{orderId}/payments:
     post:
       tags:
-      - checkout-controller
+      - Thanh toán & Đặt hàng
+      summary: Xử lý và xác nhận thanh toán đơn hàng
+      description: Xác nhận kết quả giao dịch thanh toán thành công hay thất bại cho
+        đơn hàng. Cập nhật trạng thái đơn hàng từ PENDING sang CONFIRMED hoặc CANCELLED
+        tương ứng và xử lý trừ kho vĩnh viễn hoặc hoàn trả kho.
       operationId: processPayment
       parameters:
       - name: orderId
         in: path
+        description: ID đơn hàng cần xử lý thanh toán
         required: true
         schema:
           type: string
+        example: ORD-001
       requestBody:
         content:
           application/json:
@@ -923,32 +1417,60 @@ paths:
               $ref: '#/components/schemas/PaymentRequest'
         required: true
       responses:
-        '200':
-          description: OK
+        '404':
+          description: Không tìm thấy đơn hàng
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponsePaymentResponse'
+        '403':
+          description: Không đủ quyền truy cập
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponsePaymentResponse'
+        '400':
+          description: Trạng thái thanh toán không hợp lệ hoặc không tìm thấy đơn
+            hàng
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponsePaymentResponse'
+        '401':
+          description: Mã xác thực JWT thiếu hoặc không hợp lệ
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponsePaymentResponse'
+        '200':
+          description: Xử lý thanh toán thành công
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponsePaymentResponse'
+      security:
+      - bearerAuth: []
   /api/v1/categories:
     get:
       tags:
-      - Category Module
-      summary: Get full category tree structure
-      description: Fetches categories in a hierarchical nested structure (parent-child
-        trees).
+      - Danh mục Sản phẩm
+      summary: Lấy cấu trúc cây danh mục
+      description: Lấy danh sách các danh mục sản phẩm được sắp xếp dưới dạng cấu
+        trúc cây thư mục lồng nhau (cha-con).
       operationId: getCategoryTree
       responses:
         '200':
-          description: Category tree retrieved successfully
+          description: Lấy cây danh mục thành công
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseListCategoryResponse'
     post:
       tags:
-      - Category Module
-      summary: Create a new category
-      description: Requires ADMIN role. Adds a new category level to the catalog hierarchy.
+      - Danh mục Sản phẩm
+      summary: Tạo danh mục sản phẩm mới
+      description: Yêu cầu quyền ADMIN. Thêm một danh mục sản phẩm mới vào danh sách
+        phân cấp danh mục.
       operationId: createCategory
       requestBody:
         content:
@@ -958,25 +1480,25 @@ paths:
         required: true
       responses:
         '400':
-          description: Input validation parameters failed
+          description: Tham số đầu vào không hợp lệ
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseCategoryResponse'
         '201':
-          description: Category successfully created
+          description: Tạo danh mục thành công
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseCategoryResponse'
         '401':
-          description: Authentication token missing or invalid
+          description: Mã xác thực JWT thiếu hoặc không hợp lệ
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseCategoryResponse'
         '403':
-          description: Insufficient role permissions (must be ADMIN)
+          description: Không đủ quyền hạn (yêu cầu vai trò ADMIN)
           content:
             '*/*':
               schema:
@@ -986,15 +1508,15 @@ paths:
   /api/v1/carts/{userId}/items:
     post:
       tags:
-      - Cart Module
-      summary: Add an item to the shopping cart
-      description: Requires standard authenticated user matching the userId or ADMIN
-        role. Adds product variant item to cart.
+      - Giỏ hàng
+      summary: Thêm sản phẩm vào giỏ hàng
+      description: Yêu cầu người dùng đăng nhập khớp với userId hoặc quyền ADMIN.
+        Thêm một biến thể sản phẩm vào giỏ hàng của người dùng.
       operationId: addCartItem
       parameters:
       - name: userId
         in: path
-        description: Customer ID associated with the cart
+        description: ID khách hàng liên kết với giỏ hàng
         required: true
         schema:
           type: string
@@ -1007,25 +1529,25 @@ paths:
         required: true
       responses:
         '400':
-          description: Validation parameters failed or product not found
+          description: Tham số không hợp lệ hoặc không tìm thấy sản phẩm
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseCartResponse'
         '201':
-          description: Item successfully added to cart
+          description: Thêm sản phẩm vào giỏ hàng thành công
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseCartResponse'
         '403':
-          description: Insufficient permissions
+          description: Không đủ quyền truy cập
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseCartResponse'
         '401':
-          description: Authentication token missing or invalid
+          description: Mã xác thực JWT thiếu hoặc không hợp lệ
           content:
             '*/*':
               schema:
@@ -1035,18 +1557,22 @@ paths:
   /api/v1/brands:
     get:
       tags:
-      - brand-controller
+      - Thương hiệu
+      summary: Lấy danh sách tất cả thương hiệu
+      description: Truy xuất danh sách tất cả các thương hiệu sản phẩm đang hoạt động.
       operationId: getAllBrands
       responses:
         '200':
-          description: OK
+          description: Lấy danh sách thương hiệu thành công
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseListBrandResponse'
     post:
       tags:
-      - brand-controller
+      - Thương hiệu
+      summary: Tạo thương hiệu mới (Chỉ Admin)
+      description: Yêu cầu quyền ADMIN. Thêm mới một thương hiệu sản phẩm vào hệ thống.
       operationId: createBrand
       requestBody:
         content:
@@ -1055,19 +1581,39 @@ paths:
               $ref: '#/components/schemas/BrandRequest'
         required: true
       responses:
-        '200':
-          description: OK
+        '403':
+          description: Không đủ quyền hạn (yêu cầu vai trò ADMIN)
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseBrandResponse'
+        '201':
+          description: Tạo thương hiệu thành công
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseBrandResponse'
+        '401':
+          description: Mã xác thực JWT thiếu hoặc không hợp lệ
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseBrandResponse'
+        '400':
+          description: Dữ liệu đầu vào không hợp lệ
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseBrandResponse'
+      security:
+      - bearerAuth: []
   /api/v1/authentications/tokens:
     post:
       tags:
-      - Authentication Module
-      summary: Refresh JWT access token
-      description: Generates a new JWT access token using the HttpOnly refresh token
-        cookie.
+      - Xác thực & Người dùng
+      summary: Làm mới mã xác thực JWT (Access Token)
+      description: Cấp một Access Token JWT mới bằng cách xác thực Refresh Token được
+        gửi kèm trong HttpOnly Cookie bảo mật.
       operationId: refresh
       parameters:
       - name: refresh_token
@@ -1077,13 +1623,13 @@ paths:
           type: string
       responses:
         '200':
-          description: Token refreshed successfully
+          description: Làm mới token thành công
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseAuthResponse'
         '401':
-          description: Refresh token missing, invalid, or expired
+          description: Refresh token bị thiếu, không hợp lệ hoặc đã hết hạn
           content:
             '*/*':
               schema:
@@ -1091,10 +1637,10 @@ paths:
   /api/v1/authentications/sessions:
     post:
       tags:
-      - Authentication Module
-      summary: User session login
-      description: Authenticates user credentials. Returns JWT access token in the
-        response and sets a secure HttpOnly refresh token cookie.
+      - Xác thực & Người dùng
+      summary: Đăng nhập tài khoản
+      description: Xác thực thông tin tài khoản (username/password). Trả về Access
+        Token trong phản hồi và thiết lập Refresh Token trong HttpOnly Cookie an toàn.
       operationId: login
       requestBody:
         content:
@@ -1104,28 +1650,29 @@ paths:
         required: true
       responses:
         '401':
-          description: Invalid credentials provided
+          description: Thông tin đăng nhập không chính xác
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseAuthResponse'
         '400':
-          description: Invalid validation parameters
+          description: Tham số xác thực không hợp lệ
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseAuthResponse'
         '200':
-          description: Login successful, tokens generated
+          description: Đăng nhập thành công, token đã được khởi tạo
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseAuthResponse'
     delete:
       tags:
-      - Authentication Module
-      summary: User logout
-      description: Revokes user refresh token and clears the secure HttpOnly cookie.
+      - Xác thực & Người dùng
+      summary: Đăng xuất tài khoản
+      description: Đăng xuất người dùng bằng cách thu hồi Refresh Token và xóa cookie
+        HttpOnly tương ứng.
       operationId: logout
       parameters:
       - name: refresh_token
@@ -1135,7 +1682,7 @@ paths:
           type: string
       responses:
         '200':
-          description: Logout successful
+          description: Đăng xuất thành công
           content:
             '*/*':
               schema:
@@ -1143,9 +1690,10 @@ paths:
   /api/v1/authentications/registrations:
     post:
       tags:
-      - Authentication Module
-      summary: Register a new user account
-      description: Creates a new user in the system with default roles.
+      - Xác thực & Người dùng
+      summary: Đăng ký tài khoản mới
+      description: Tạo một tài khoản thành viên mới trong hệ thống với các thông tin
+        đăng ký cơ bản.
       operationId: register
       requestBody:
         content:
@@ -1155,13 +1703,13 @@ paths:
         required: true
       responses:
         '201':
-          description: Registration successful
+          description: Đăng ký tài khoản thành công
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseAuthResponse'
         '400':
-          description: Validation parameters failed or email already registered
+          description: Tham số không hợp lệ hoặc email đã được đăng ký
           content:
             '*/*':
               schema:
@@ -1179,11 +1727,14 @@ paths:
           type: string
       responses:
         '200':
-          description: OK
+          description: Thành công
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseVoid'
+      summary: Đồng bộ tồn kho sản phẩm từ DB lên Redis
+      description: Yêu cầu quyền ADMIN. Đồng bộ số lượng tồn kho của một sản phẩm
+        cụ thể từ cơ sở dữ liệu lên Redis.
   /api/v1/admin/stocks/synchronizations:
     post:
       tags:
@@ -1191,149 +1742,64 @@ paths:
       operationId: syncAllStock
       responses:
         '200':
-          description: OK
+          description: Thành công
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseVoid'
-  /api/v1/admin/reviews/{reviewId}/replies:
-    post:
-      tags:
-      - product-review-controller
-      operationId: replyToReview
-      parameters:
-      - name: reviewId
-        in: path
-        required: true
-        schema:
-          type: integer
-          format: int64
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AdminReplyRequest'
-        required: true
-      responses:
-        '200':
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: '#/components/schemas/ApiResponseProductReviewResponse'
-  /api/v1/admin/orders:
-    get:
-      tags:
-      - Admin Order Module
-      summary: Get all orders with pagination
-      description: Requires ADMIN role. Fetches a paginated list of all orders.
-      operationId: getAllOrdersAdmin
-      parameters:
-      - name: pageable
-        in: query
-        required: true
-        schema:
-          $ref: '#/components/schemas/Pageable'
-      responses:
-        '200':
-          description: Orders retrieved successfully
-          content:
-            '*/*':
-              schema:
-                $ref: '#/components/schemas/ApiResponseListOrderResponse'
-        '401':
-          description: Authentication token missing or invalid
-        '403':
-          description: Insufficient permissions (must be ADMIN)
-      security:
-      - bearerAuth: []
-  /api/v1/admin/orders/{orderId}/status:
-    put:
-      tags:
-      - Admin Order Module
-      summary: Update order status
-      description: Requires ADMIN role. Update the status of an existing order.
-      operationId: updateOrderStatusAdmin
-      parameters:
-      - name: orderId
-        in: path
-        description: Order ID to update
-        required: true
-        schema:
-          type: string
-      - name: status
-        in: query
-        description: Target status value
-        required: true
-        schema:
-          type: string
-      responses:
-        '200':
-          description: Order status updated successfully
-          content:
-            '*/*':
-              schema:
-                $ref: '#/components/schemas/ApiResponseOrderResponse'
-        '400':
-          description: Invalid status state transition
-        '401':
-          description: Authentication token missing or invalid
-        '403':
-          description: Insufficient permissions (must be ADMIN)
-        '404':
-          description: Order not found
-      security:
-      - bearerAuth: []
+      summary: Đồng bộ tồn kho toàn bộ sản phẩm từ DB lên Redis
+      description: Yêu cầu quyền ADMIN. Thực hiện đồng bộ số lượng tồn kho của tất
+        cả sản phẩm từ cơ sở dữ liệu lên Redis.
   /api/v1/orders/{orderId}/status:
     patch:
       tags:
-      - Order Module
-      summary: Update order processing status (Admin)
-      description: Requires ADMIN role. Transitions an order to status e.g., PENDING,
-        PROCESSING, COMPLETED, CANCELLED.
-      operationId: updateOrderStatus
+      - Đơn hàng Người dùng
+      summary: Cập nhật trạng thái đơn hàng (Admin)
+      description: 'Yêu cầu quyền ADMIN. Cập nhật và chuyển đổi trạng thái của đơn
+        hàng (ví dụ: PENDING, PROCESSING, COMPLETED, CANCELLED).'
+      operationId: updateOrderStatus_1
       parameters:
       - name: orderId
         in: path
-        description: Order ID to update
+        description: ID đơn hàng cần cập nhật
         required: true
         schema:
           type: string
         example: ORD-20260523-999
       - name: status
         in: query
-        description: Target status transition state
+        description: Trạng thái chuyển đổi đích của đơn hàng
         required: true
         schema:
           type: string
         example: COMPLETED
       responses:
         '200':
-          description: Order status updated successfully
+          description: Cập nhật trạng thái đơn hàng thành công
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseOrderResponse'
         '403':
-          description: Insufficient permissions (must be ADMIN)
+          description: Không đủ quyền hạn (yêu cầu vai trò ADMIN)
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseOrderResponse'
         '404':
-          description: Order ID not found
+          description: Không tìm thấy ID đơn hàng
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseOrderResponse'
         '400':
-          description: Invalid status state transition
+          description: Chuyển đổi trạng thái không hợp lệ
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseOrderResponse'
         '401':
-          description: Authentication token missing or invalid
+          description: Mã xác thực JWT thiếu hoặc không hợp lệ
           content:
             '*/*':
               schema:
@@ -1343,31 +1809,47 @@ paths:
   /api/v1/inventories/{productId}/stock:
     get:
       tags:
-      - inventory-controller
+      - Quản lý Kho hàng
+      summary: Lấy số lượng tồn kho của sản phẩm
+      description: Lấy số lượng tồn kho khả dụng thực tế của một sản phẩm (tổng số
+        lượng tồn kho trừ đi số lượng đã đặt giữ và đã bán).
       operationId: getStock
       parameters:
       - name: productId
         in: path
+        description: Mã sản phẩm duy nhất
         required: true
         schema:
           type: string
+        example: P001
       responses:
         '200':
-          description: OK
+          description: Lấy số lượng tồn kho thành công
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseInteger'
+        '404':
+          description: Không tìm thấy sản phẩm
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseInteger'
     patch:
       tags:
-      - inventory-controller
+      - Quản lý Kho hàng
+      summary: Cập nhật số lượng tồn kho (Chỉ Admin)
+      description: Yêu cầu quyền ADMIN. Điều chỉnh thủ công số lượng tồn kho của một
+        sản phẩm nhằm điều chỉnh kho hoặc nhập thêm hàng.
       operationId: updateStock
       parameters:
       - name: productId
         in: path
+        description: Mã sản phẩm duy nhất
         required: true
         schema:
           type: string
+        example: P001
       requestBody:
         content:
           application/json:
@@ -1375,31 +1857,57 @@ paths:
               $ref: '#/components/schemas/UpdateStockRequest'
         required: true
       responses:
-        '200':
-          description: OK
+        '403':
+          description: Không đủ quyền hạn (yêu cầu vai trò ADMIN)
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseVoid'
+        '400':
+          description: Yêu cầu cập nhật không hợp lệ hoặc số lượng không chính xác
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+        '404':
+          description: Không tìm thấy sản phẩm
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+        '401':
+          description: Mã xác thực JWT thiếu hoặc không hợp lệ
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+        '200':
+          description: Cập nhật tồn kho thành công
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+      security:
+      - bearerAuth: []
   /api/v1/carts/{userId}/items/{productId}/quantity:
     patch:
       tags:
-      - Cart Module
-      summary: Update cart item quantity
-      description: Requires standard authenticated user matching the userId or ADMIN
-        role. Updates stock count for a specific product inside the cart.
+      - Giỏ hàng
+      summary: Cập nhật số lượng sản phẩm trong giỏ
+      description: Yêu cầu người dùng đăng nhập khớp với userId hoặc quyền ADMIN.
+        Cập nhật số lượng của một biến thể sản phẩm cụ thể trong giỏ hàng.
       operationId: updateCartItemQuantity
       parameters:
       - name: userId
         in: path
-        description: Customer ID associated with the cart
+        description: ID khách hàng liên kết với giỏ hàng
         required: true
         schema:
           type: string
         example: USR-001
       - name: productId
         in: path
-        description: The unique product code to update
+        description: Mã sản phẩm duy nhất cần cập nhật
         required: true
         schema:
           type: string
@@ -1412,109 +1920,55 @@ paths:
         required: true
       responses:
         '400':
-          description: Invalid quantity or out of stock
+          description: Số lượng không hợp lệ hoặc hết hàng
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseCartResponse'
         '200':
-          description: Cart item quantity successfully updated
+          description: Cập nhật số lượng sản phẩm trong giỏ thành công
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseCartResponse'
         '403':
-          description: Insufficient permissions
+          description: Không đủ quyền truy cập
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseCartResponse'
         '401':
-          description: Authentication token missing or invalid
+          description: Mã xác thực JWT thiếu hoặc không hợp lệ
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseCartResponse'
       security:
       - bearerAuth: []
-  /api/v1/wishlists/{userId}:
+  /api/v1/search:
     get:
       tags:
-      - wishlist-controller
-      operationId: getWishlist
+      - Tìm kiếm thông minh AI
+      summary: Tìm kiếm sản phẩm thông minh
+      description: Thực hiện truy vấn tìm kiếm kết hợp hybrid semantic search dùng
+        vector nhúng AI và Full-Text Search (RRF) trả về đầy đủ chi tiết sản phẩm.
+      operationId: search
       parameters:
-      - name: userId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: pageable
-        in: query
-        required: true
-        schema:
-          $ref: '#/components/schemas/Pageable'
-      responses:
-        '200':
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: '#/components/schemas/ApiResponseListWishlistResponse'
-  /api/v1/variants/{variantSku}/reviews:
-    get:
-      tags:
-      - product-review-controller
-      operationId: getVariantReviews
-      parameters:
-      - name: variantSku
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: pageable
-        in: query
-        required: true
-        schema:
-          $ref: '#/components/schemas/Pageable'
-      responses:
-        '200':
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: '#/components/schemas/ApiResponseListProductReviewResponse'
-  /api/v1/security-demos/sql-injections/vulnerable-products:
-    get:
-      tags:
-      - sq-li-controller
-      operationId: searchVulnerable
-      parameters:
-      - name: name
+      - name: q
         in: query
         required: true
         schema:
           type: string
-      responses:
-        '200':
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: '#/components/schemas/ApiResponseListProductResponse'
-  /api/v1/security-demos/sql-injections/secure-products:
-    get:
-      tags:
-      - sq-li-controller
-      operationId: searchSecure
-      parameters:
-      - name: name
+      - name: limit
         in: query
-        required: true
+        required: false
         schema:
-          type: string
+          type: integer
+          format: int32
+          default: 10
       responses:
         '200':
-          description: OK
+          description: Thành công
           content:
             '*/*':
               schema:
@@ -1522,28 +1976,28 @@ paths:
   /api/v1/products/{productId}/stock:
     get:
       tags:
-      - Product Module
-      summary: Get available stock count
-      description: Retrieves current warehouse stock count for a specific product
-        ID.
+      - Sản phẩm
+      summary: Lấy số lượng tồn khả dụng của sản phẩm
+      description: Truy cập trực tiếp số lượng tồn kho khả dụng trong kho của một
+        sản phẩm cụ thể.
       operationId: getAvailableStock
       parameters:
       - name: productId
         in: path
-        description: The unique product code
+        description: Mã sản phẩm duy nhất
         required: true
         schema:
           type: string
         example: P001
       responses:
         '200':
-          description: Stock count retrieved successfully
+          description: Lấy số lượng tồn kho thành công
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseInteger'
         '404':
-          description: Product not found
+          description: Không tìm thấy sản phẩm
           content:
             '*/*':
               schema:
@@ -1551,68 +2005,114 @@ paths:
   /api/v1/products/{productId}/availability:
     get:
       tags:
-      - Product Module
-      summary: Check product availability status
-      description: Checks whether a product is in stock and available for sale.
+      - Sản phẩm
+      summary: Kiểm tra trạng thái khả dụng của sản phẩm
+      description: Kiểm tra xem sản phẩm còn hàng trong kho và có sẵn sàng để bán
+        hay không.
       operationId: isProductAvailable
       parameters:
       - name: productId
         in: path
-        description: The unique product code
+        description: Mã sản phẩm duy nhất
         required: true
         schema:
           type: string
         example: P001
       responses:
         '200':
-          description: Availability status checked successfully
+          description: Kiểm tra trạng thái khả dụng thành công
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseBoolean'
         '404':
-          description: Product not found
+          description: Không tìm thấy sản phẩm
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseBoolean'
+  /api/v1/payments/vnpay/return:
+    get:
+      tags:
+      - Cổng Thanh toán
+      operationId: vnpayReturn
+      parameters:
+      - name: queryParams
+        in: query
+        required: true
+        schema:
+          type: object
+          additionalProperties:
+            type: string
+      responses:
+        '200':
+          description: Thành công
+      summary: Xử lý kết quả trả về từ VNPAY
+      description: Nhận kết quả giao dịch thanh toán từ cổng VNPAY qua yêu cầu chuyển
+        hướng GET từ trình duyệt, tiến hành xác thực chữ ký, cập nhật đơn hàng và
+        điều hướng người dùng về trang thông tin kết quả của frontend.
+  /api/v1/payments/vnpay/ipn:
+    get:
+      tags:
+      - Cổng Thanh toán
+      operationId: vnpayIpn
+      parameters:
+      - name: queryParams
+        in: query
+        required: true
+        schema:
+          type: object
+          additionalProperties:
+            type: string
+      responses:
+        '200':
+          description: Thành công
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties:
+                  type: string
+      summary: Nhận thông báo IPN từ VNPAY
+      description: API xử lý thông báo IPN bất đồng bộ server-to-server từ VNPAY để
+        cập nhật trạng thái đơn hàng an toàn, tránh mất mát thông tin giao dịch.
   /api/v1/orders/{orderId}:
     get:
       tags:
-      - Order Module
-      summary: Get single order details
-      description: Fetches complete details for a single order by its ID. Requires
-        matching owner user or ADMIN role.
+      - Đơn hàng Người dùng
+      summary: Lấy chi tiết một đơn hàng
+      description: Lấy thông tin chi tiết đầy đủ của một đơn hàng theo mã đơn hàng.
+        Yêu cầu chủ sở hữu đơn hàng khớp hoặc quyền ADMIN.
       operationId: getOrderById
       parameters:
       - name: orderId
         in: path
-        description: Order ID to look up
+        description: ID đơn hàng cần truy vấn
         required: true
         schema:
           type: string
         example: ORD-20260523-999
       responses:
         '200':
-          description: Order details successfully found
+          description: Lấy chi tiết đơn hàng thành công
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseOrderResponse'
         '404':
-          description: Order ID not found
+          description: Không tìm thấy ID đơn hàng
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseOrderResponse'
         '403':
-          description: Insufficient permissions
+          description: Không đủ quyền truy cập
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseOrderResponse'
         '401':
-          description: Authentication token missing or invalid
+          description: Mã xác thực JWT thiếu hoặc không hợp lệ
           content:
             '*/*':
               schema:
@@ -1621,45 +2121,46 @@ paths:
       - bearerAuth: []
     delete:
       tags:
-      - Order Module
-      summary: Cancel a customer order
-      description: Cancels an order. Requires matching owner user or ADMIN role.
+      - Đơn hàng Người dùng
+      summary: Hủy đơn hàng
+      description: Yêu cầu người đặt hàng khớp hoặc quyền ADMIN. Thực hiện hủy bỏ
+        đơn hàng chờ thanh toán hoặc đang xử lý.
       operationId: cancelOrder
       parameters:
       - name: orderId
         in: path
-        description: Order ID to cancel
+        description: ID đơn hàng cần hủy
         required: true
         schema:
           type: string
         example: ORD-20260523-999
       responses:
         '400':
-          description: Order cannot be cancelled in its current state
+          description: Không thể hủy đơn hàng ở trạng thái hiện tại
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseOrderResponse'
         '404':
-          description: Order ID not found
+          description: Không tìm thấy ID đơn hàng
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseOrderResponse'
         '403':
-          description: Insufficient permissions
+          description: Không đủ quyền truy cập
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseOrderResponse'
         '200':
-          description: Order successfully cancelled
+          description: Hủy đơn hàng thành công
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseOrderResponse'
         '401':
-          description: Authentication token missing or invalid
+          description: Mã xác thực JWT thiếu hoặc không hợp lệ
           content:
             '*/*':
               schema:
@@ -1669,17 +2170,28 @@ paths:
   /api/v1/inventories/{productId}:
     get:
       tags:
-      - inventory-controller
+      - Quản lý Kho hàng
+      summary: Lấy chi tiết thông tin kho của sản phẩm
+      description: Truy xuất chi tiết dữ liệu kho của một sản phẩm bao gồm số lượng
+        tồn thực tế, số lượng đã đặt giữ, số lượng đã bán và cấu hình kho.
       operationId: getInventoryDetails
       parameters:
       - name: productId
         in: path
+        description: Mã sản phẩm duy nhất
         required: true
         schema:
           type: string
+        example: P001
       responses:
         '200':
-          description: OK
+          description: Lấy chi tiết tồn kho thành công
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseInventoryResponse'
+        '404':
+          description: Không tìm thấy sản phẩm
           content:
             '*/*':
               schema:
@@ -1687,23 +2199,42 @@ paths:
   /api/v1/inventories/{productId}/availability:
     get:
       tags:
-      - inventory-controller
+      - Quản lý Kho hàng
+      summary: Kiểm tra tồn kho khả dụng cho một số lượng cụ thể
+      description: Xác minh xem tồn kho hiện tại của sản phẩm có đáp ứng được số lượng
+        mua mong muốn hay không.
       operationId: hasEnoughStock
       parameters:
       - name: productId
         in: path
+        description: Mã sản phẩm duy nhất
         required: true
         schema:
           type: string
+        example: P001
       - name: quantity
         in: query
+        description: Số lượng cần kiểm tra tính khả dụng
         required: true
         schema:
           type: integer
           format: int32
+        example: 5
       responses:
+        '400':
+          description: Tham số số lượng không hợp lệ
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseBoolean'
         '200':
-          description: OK
+          description: Kiểm tra trạng thái khả dụng thành công
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseBoolean'
+        '404':
+          description: Không tìm thấy sản phẩm
           content:
             '*/*':
               schema:
@@ -1721,25 +2252,39 @@ paths:
           $ref: '#/components/schemas/CsrfToken'
       responses:
         '200':
-          description: OK
+          description: Thành công
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseCsrfTokenResponse'
+      summary: Lấy Token bảo mật CSRF
+      description: Cung cấp Token CSRF của phiên hiện tại để nhúng vào tiêu đề các
+        yêu cầu thay đổi dữ liệu (POST, PUT, DELETE, PATCH) nhằm chống tấn công CSRF.
   /api/v1/coupons/{code}/validity:
     get:
       tags:
-      - coupon-controller
+      - Mã giảm giá
+      summary: Kiểm tra tính hợp lệ của mã giảm giá
+      description: Xác thực xem mã giảm giá có hợp lệ hay không (không quá hạn dùng,
+        còn lượt sử dụng và đáp ứng điều kiện).
       operationId: validateCoupon
       parameters:
       - name: code
         in: path
+        description: Mã giảm giá cần kiểm tra tính hợp lệ
         required: true
         schema:
           type: string
+        example: WELCOME10
       responses:
         '200':
-          description: OK
+          description: Kiểm tra tính hợp lệ của mã giảm giá thành công
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseBoolean'
+        '404':
+          description: Không tìm thấy mã giảm giá
           content:
             '*/*':
               schema:
@@ -1747,23 +2292,42 @@ paths:
   /api/v1/coupons/{code}/discounts:
     get:
       tags:
-      - coupon-controller
+      - Mã giảm giá
+      summary: Tính toán số tiền giảm giá của coupon
+      description: Tính toán chính xác số tiền được chiết khấu dựa trên thông số đơn
+        hàng truyền vào khi áp dụng mã giảm giá này.
       operationId: getDiscount
       parameters:
       - name: code
         in: path
+        description: Mã giảm giá
         required: true
         schema:
           type: string
+        example: WELCOME10
       - name: orderAmount
         in: query
+        description: Giá trị tạm tính của đơn hàng bằng VNĐ
         required: true
         schema:
           type: integer
           format: int64
+        example: 1000000
       responses:
         '200':
-          description: OK
+          description: Tính toán chiết khấu thành công
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseLong'
+        '400':
+          description: Số tiền đơn hàng không hợp lệ
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseLong'
+        '404':
+          description: Không tìm thấy mã giảm giá
           content:
             '*/*':
               schema:
@@ -1771,28 +2335,28 @@ paths:
   /api/v1/categories/{idOrSlug}:
     get:
       tags:
-      - Category Module
-      summary: Get category details by ID or slug
-      description: Finds a category either by its database numerical ID or by its
-        URL slug name.
+      - Danh mục Sản phẩm
+      summary: Lấy chi tiết danh mục theo ID hoặc Slug
+      description: Tìm kiếm thông tin danh mục thông qua ID số trong cơ sở dữ liệu
+        hoặc thông qua chuỗi slug của danh mục.
       operationId: getCategory
       parameters:
       - name: idOrSlug
         in: path
-        description: Category ID or slug string
+        description: ID danh mục hoặc chuỗi slug danh mục
         required: true
         schema:
           type: string
         example: electronics
       responses:
         '200':
-          description: Category details successfully found
+          description: Lấy chi tiết danh mục thành công
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseCategoryResponse'
         '404':
-          description: Category not found
+          description: Không tìm thấy danh mục
           content:
             '*/*':
               schema:
@@ -1800,34 +2364,34 @@ paths:
   /api/v1/carts/{userId}:
     get:
       tags:
-      - Cart Module
-      summary: Retrieve user shopping cart
-      description: Requires standard authenticated user matching the userId or ADMIN
-        role. Fetches active cart and nested line items.
+      - Giỏ hàng
+      summary: Lấy giỏ hàng của người dùng
+      description: Yêu cầu người dùng đăng nhập khớp với userId hoặc quyền ADMIN.
+        Lấy thông tin giỏ hàng và danh sách các sản phẩm đang có.
       operationId: getCart
       parameters:
       - name: userId
         in: path
-        description: Customer ID associated with the cart
+        description: ID khách hàng liên kết với giỏ hàng
         required: true
         schema:
           type: string
         example: USR-001
       responses:
         '403':
-          description: Insufficient permissions to access this cart
+          description: Không đủ quyền truy cập giỏ hàng này
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseCartResponse'
         '401':
-          description: Authentication token missing or invalid
+          description: Mã xác thực JWT thiếu hoặc không hợp lệ
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseCartResponse'
         '200':
-          description: Shopping cart retrieved successfully
+          description: Lấy thông tin giỏ hàng thành công
           content:
             '*/*':
               schema:
@@ -1836,34 +2400,34 @@ paths:
       - bearerAuth: []
     delete:
       tags:
-      - Cart Module
-      summary: Clear the entire shopping cart
-      description: Requires standard authenticated user matching the userId or ADMIN
-        role. Removes all items from active cart.
+      - Giỏ hàng
+      summary: Xóa sạch giỏ hàng
+      description: Yêu cầu người dùng đăng nhập khớp với userId hoặc quyền ADMIN.
+        Loại bỏ toàn bộ sản phẩm khỏi giỏ hàng.
       operationId: clearCart
       parameters:
       - name: userId
         in: path
-        description: Customer ID associated with the cart
+        description: ID khách hàng liên kết với giỏ hàng
         required: true
         schema:
           type: string
         example: USR-001
       responses:
         '403':
-          description: Insufficient permissions
+          description: Không đủ quyền truy cập
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseVoid'
         '200':
-          description: Cart cleared successfully
+          description: Xóa sạch giỏ hàng thành công
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseVoid'
         '401':
-          description: Authentication token missing or invalid
+          description: Mã xác thực JWT thiếu hoặc không hợp lệ
           content:
             '*/*':
               schema:
@@ -1873,17 +2437,28 @@ paths:
   /api/v1/brands/{idOrSlug}:
     get:
       tags:
-      - brand-controller
+      - Thương hiệu
+      summary: Lấy chi tiết thương hiệu theo ID hoặc Slug
+      description: Lấy chi tiết thương hiệu thông qua ID số trong cơ sở dữ liệu hoặc
+        thông qua chuỗi slug của thương hiệu.
       operationId: getBrand
       parameters:
       - name: idOrSlug
         in: path
+        description: ID thương hiệu hoặc chuỗi slug thương hiệu
         required: true
         schema:
           type: string
+        example: apple
       responses:
+        '404':
+          description: Không tìm thấy thương hiệu
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseBrandResponse'
         '200':
-          description: OK
+          description: Lấy chi tiết thương hiệu thành công
           content:
             '*/*':
               schema:
@@ -1891,106 +2466,297 @@ paths:
   /api/v1/authentications/profiles/current:
     get:
       tags:
-      - Authentication Module
-      summary: Get current authenticated user profile
-      description: Requires a valid JWT token. Fetches current session's authenticated
-        user details.
+      - Xác thực & Người dùng
+      summary: Lấy thông tin tài khoản hiện tại
+      description: Yêu cầu token JWT hợp lệ. Lấy thông tin chi tiết của người dùng
+        đang đăng nhập dựa trên JWT token được gửi kèm.
       operationId: getCurrentUser
       responses:
         '401':
-          description: Authentication token missing or invalid
+          description: Mã xác thực JWT thiếu hoặc không hợp lệ
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseAuthResponse'
         '200':
-          description: Profile details retrieved successfully
+          description: Lấy chi tiết thông tin tài khoản thành công
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseAuthResponse'
       security:
       - bearerAuth: []
-  /api/v1/wishlists/{userId}/items/{productId}:
-    delete:
+  /api/v1/admin/users:
+    get:
       tags:
-      - wishlist-controller
-      operationId: removeFromWishlist
+      - Quản lý Thành viên (Admin)
+      summary: Lấy danh sách người dùng (Admin)
+      description: Yêu cầu quyền ADMIN. Lấy danh sách phân trang tất cả tài khoản
+        người dùng trên hệ thống, hỗ trợ tìm kiếm theo từ khóa.
+      operationId: getAllUsers
       parameters:
-      - name: userId
-        in: path
-        required: true
+      - name: keyword
+        in: query
+        required: false
         schema:
           type: string
-      - name: productId
-        in: path
+      - name: pageable
+        in: query
         required: true
         schema:
-          type: string
+          $ref: '#/components/schemas/Pageable'
       responses:
         '200':
-          description: OK
+          description: Lấy danh sách người dùng thành công
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/ApiResponseVoid'
-  /api/v1/reviews/{reviewId}:
-    delete:
+                $ref: '#/components/schemas/ApiResponseListUserProfileResponse'
+      security:
+      - bearerAuth: []
+  /api/v1/admin/statistics/summary:
+    get:
       tags:
-      - product-review-controller
-      operationId: deleteReview
+      - Thống kê & Báo cáo (Admin)
+      summary: Lấy chỉ số thống kê tổng quan (Admin)
+      description: Yêu cầu quyền ADMIN. Truy vấn dữ liệu thống kê tổng thể bao gồm
+        tổng doanh thu, tổng số đơn hàng, số khách hàng và sản phẩm hoạt động.
+      operationId: getDashboardSummary
+      responses:
+        '200':
+          description: Thành công
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseAdminDashboardSummaryResponse'
+      security:
+      - bearerAuth: []
+  /api/v1/admin/statistics/revenue-chart:
+    get:
+      tags:
+      - Thống kê & Báo cáo (Admin)
+      summary: Lấy biểu đồ doanh thu theo ngày (Admin)
+      description: Yêu cầu quyền ADMIN. Lấy thống kê doanh thu thực tế chi tiết theo
+        từng ngày trong khoảng thời gian N ngày gần nhất.
+      operationId: getRevenueChart
       parameters:
-      - name: reviewId
-        in: path
-        required: true
+      - name: days
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 7
+      responses:
+        '200':
+          description: Thành công
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseListRevenueChartItem'
+      security:
+      - bearerAuth: []
+  /api/v1/admin/statistics/order-status:
+    get:
+      tags:
+      - Thống kê & Báo cáo (Admin)
+      summary: Lấy số lượng đơn hàng theo trạng thái (Admin)
+      description: Yêu cầu quyền ADMIN. Thống kê số lượng đơn hàng hiện tại phân loại
+        theo các trạng thái xử lý đơn hàng.
+      operationId: getOrderStatusStats
+      responses:
+        '200':
+          description: Thành công
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseListOrderStatusStat'
+      security:
+      - bearerAuth: []
+  /api/v1/admin/statistics/best-sellers:
+    get:
+      tags:
+      - Thống kê & Báo cáo (Admin)
+      summary: Lấy danh sách sản phẩm bán chạy nhất (Admin)
+      description: Yêu cầu quyền ADMIN. Danh sách các sản phẩm có số lượng bán ra
+        nhiều nhất kèm doanh thu tạo ra tương ứng.
+      operationId: getBestSellers
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 5
+      responses:
+        '200':
+          description: Thành công
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseListBestSellerItem'
+      security:
+      - bearerAuth: []
+  /api/v1/admin/products:
+    get:
+      tags:
+      - Quản lý Sản phẩm (Admin)
+      summary: Lấy toàn bộ sản phẩm (Admin)
+      description: Yêu cầu quyền ADMIN. Lấy danh sách phân trang sản phẩm với các
+        bộ lọc dành riêng cho giao diện quản trị viên.
+      operationId: getAllProducts_1
+      parameters:
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: categoryId
+        in: query
+        required: false
         schema:
           type: integer
           format: int64
+      - name: brandId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: minPrice
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: maxPrice
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: pageable
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/Pageable'
       responses:
         '200':
-          description: OK
+          description: Lấy danh sách sản phẩm thành công
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/ApiResponseVoid'
+                $ref: '#/components/schemas/ApiResponseListProductResponse'
+      security:
+      - bearerAuth: []
+  /api/v1/admin/orders:
+    get:
+      tags:
+      - Quản lý Đơn hàng (Admin)
+      summary: Lấy toàn bộ đơn hàng (Admin)
+      description: Yêu cầu quyền ADMIN. Lấy danh sách đơn hàng toàn hệ thống dạng
+        phân trang phục vụ quản lý đơn hàng.
+      operationId: getAllOrders
+      parameters:
+      - name: pageable
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/Pageable'
+      responses:
+        '200':
+          description: Lấy danh sách đơn hàng thành công
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseListOrderResponse'
+      security:
+      - bearerAuth: []
+  /api/v1/admin/categories:
+    get:
+      tags:
+      - Quản lý Danh mục (Admin)
+      summary: Lấy toàn bộ danh mục (Admin)
+      description: Yêu cầu quyền ADMIN. Lấy danh sách phân trang toàn bộ danh mục
+        sản phẩm hỗ trợ quản lý danh mục.
+      operationId: getAllCategories
+      parameters:
+      - name: pageable
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/Pageable'
+      responses:
+        '200':
+          description: Lấy danh sách danh mục thành công
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseListCategoryResponse'
+      security:
+      - bearerAuth: []
+  /api/v1/admin/brands:
+    get:
+      tags:
+      - Quản lý Thương hiệu (Admin)
+      summary: Lấy toàn bộ thương hiệu (Admin)
+      description: Yêu cầu quyền ADMIN. Lấy danh sách phân trang tất cả thương hiệu
+        sản phẩm phục vụ quản lý thương hiệu.
+      operationId: getAllBrands_1
+      parameters:
+      - name: pageable
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/Pageable'
+      responses:
+        '200':
+          description: Lấy danh sách thương hiệu thành công
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseListBrandResponse'
+      security:
+      - bearerAuth: []
   /api/v1/carts/{userId}/items/{productId}:
     delete:
       tags:
-      - Cart Module
-      summary: Remove an item from the shopping cart
-      description: Requires standard authenticated user matching the userId or ADMIN
-        role. Removes product reference from cart.
+      - Giỏ hàng
+      summary: Xóa sản phẩm khỏi giỏ hàng
+      description: Yêu cầu người dùng đăng nhập khớp với userId hoặc quyền ADMIN.
+        Loại bỏ sản phẩm khỏi giỏ hàng của người dùng.
       operationId: removeCartItem
       parameters:
       - name: userId
         in: path
-        description: Customer ID associated with the cart
+        description: ID khách hàng liên kết với giỏ hàng
         required: true
         schema:
           type: string
         example: USR-001
       - name: productId
         in: path
-        description: The unique product code to remove
+        description: Mã sản phẩm duy nhất cần xóa
         required: true
         schema:
           type: string
         example: P001
       responses:
         '403':
-          description: Insufficient permissions
+          description: Không đủ quyền truy cập
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseCartResponse'
         '200':
-          description: Item removed successfully
+          description: Xóa sản phẩm khỏi giỏ hàng thành công
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseCartResponse'
         '401':
-          description: Authentication token missing or invalid
+          description: Mã xác thực JWT thiếu hoặc không hợp lệ
           content:
             '*/*':
               schema:
@@ -2004,11 +2770,14 @@ paths:
       operationId: clearAllStock
       responses:
         '200':
-          description: OK
+          description: Thành công
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseVoid'
+      summary: Xóa sạch kho dữ liệu tồn kho trong Redis
+      description: Yêu cầu quyền ADMIN. Xóa bỏ hoàn toàn tất cả dữ liệu lưu trữ tồn
+        kho trên Redis.
 components:
   schemas:
     UpdateProfileRequest:
@@ -2082,6 +2851,10 @@ components:
           type: array
           items:
             type: string
+        active:
+          type: boolean
+        role:
+          type: string
     UserAddressRequest:
       required:
       - addressLine
@@ -2161,6 +2934,8 @@ components:
         image:
           type: string
           format: binary
+        variants:
+          type: string
     ApiResponseProductResponse:
       type: object
       properties:
@@ -2190,12 +2965,51 @@ components:
         price:
           type: integer
           format: int64
+        quantity:
+          type: integer
+          format: int32
         status:
           type: string
         imageUrl:
           type: string
         imagePublicId:
           type: string
+        variants:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductVariantResponse'
+    ProductVariantAttributeResponse:
+      type: object
+      properties:
+        name:
+          type: string
+        value:
+          type: string
+    ProductVariantResponse:
+      type: object
+      properties:
+        sku:
+          type: string
+        productName:
+          type: string
+        imageUrl:
+          type: string
+        price:
+          type: integer
+          format: int64
+        quantity:
+          type: integer
+          format: int32
+        reservedQuantity:
+          type: integer
+          format: int32
+        soldQuantity:
+          type: integer
+          format: int32
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductVariantAttributeResponse'
     UpdateCouponRequest:
       type: object
       properties:
@@ -2368,181 +3182,6 @@ components:
           type: object
         pagination:
           $ref: '#/components/schemas/PaginationInfo'
-    WishlistRequest:
-      required:
-      - productId
-      type: object
-      properties:
-        productId:
-          type: string
-    ApiResponseWishlistResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-        timestamp:
-          type: string
-          format: date-time
-        status:
-          type: integer
-          format: int32
-        message:
-          type: string
-        data:
-          $ref: '#/components/schemas/WishlistResponse'
-        pagination:
-          $ref: '#/components/schemas/PaginationInfo'
-    WishlistResponse:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int64
-        userId:
-          type: string
-        productId:
-          type: string
-        productName:
-          type: string
-        productPrice:
-          type: integer
-          format: int64
-        createdAt:
-          type: string
-          format: date-time
-    ProductReviewRequest:
-      required:
-      - comment
-      - rating
-      - variantSku
-      type: object
-      properties:
-        variantSku:
-          type: string
-        orderId:
-          type: string
-        rating:
-          maximum: 5
-          minimum: 1
-          type: integer
-          format: int32
-        comment:
-          type: string
-        imageUrls:
-          type: array
-          items:
-            type: string
-    ApiResponseProductReviewResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-        timestamp:
-          type: string
-          format: date-time
-        status:
-          type: integer
-          format: int32
-        message:
-          type: string
-        data:
-          $ref: '#/components/schemas/ProductReviewResponse'
-        pagination:
-          $ref: '#/components/schemas/PaginationInfo'
-    ProductReviewResponse:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int64
-        userId:
-          type: string
-        username:
-          type: string
-        variantSku:
-          type: string
-        orderId:
-          type: string
-        rating:
-          type: integer
-          format: int32
-        comment:
-          type: string
-        createdAt:
-          type: string
-          format: date-time
-        imageUrls:
-          type: array
-          items:
-            type: string
-        replies:
-          type: array
-          items:
-            $ref: '#/components/schemas/ProductReviewResponse'
-    OrderItemRequest:
-      required:
-      - price
-      - variantSku
-      - quantity
-      - productName
-      type: object
-      properties:
-        variantSku:
-          type: string
-          description: Product variant SKU
-        productName:
-          type: string
-          description: Snapshot of product name at checkout
-        variantName:
-          type: string
-          description: Snapshot of variant name at checkout
-        quantity:
-          type: integer
-          format: int32
-        price:
-          type: integer
-          format: int64
-    OrderRequest:
-      required:
-      - city
-      - district
-      - orderItems
-      - phoneNumber
-      - shippingAddress
-      - userId
-      - ward
-      type: object
-      properties:
-        userId:
-          type: string
-        orderItems:
-          type: array
-          items:
-            $ref: '#/components/schemas/OrderItemRequest'
-        couponCode:
-          maxLength: 50
-          minLength: 0
-          type: string
-        shippingAddress:
-          type: string
-        city:
-          maxLength: 100
-          minLength: 2
-          type: string
-        district:
-          maxLength: 100
-          minLength: 2
-          type: string
-        ward:
-          maxLength: 100
-          minLength: 2
-          type: string
-        postalCode:
-          maxLength: 20
-          minLength: 0
-          type: string
-        phoneNumber:
-          type: string
     ApiResponseOrderResponse:
       type: object
       properties:
@@ -2568,13 +3207,10 @@ components:
           format: int64
         variantSku:
           type: string
-          description: Product variant SKU
         productName:
           type: string
-          description: Snapshot of product name at checkout
         variantName:
           type: string
-          description: Snapshot of variant name at checkout
         quantity:
           type: integer
           format: int32
@@ -2608,6 +3244,21 @@ components:
           type: string
         status:
           type: string
+          enum:
+          - PENDING
+          - CONFIRMED
+          - PROCESSING
+          - SHIPPED
+          - DELIVERED
+          - CANCELLED
+        paymentStatus:
+          type: string
+          enum:
+          - UNPAID
+          - PAID
+          - REFUNDED
+        customerNote:
+          type: string
         createdAt:
           type: string
           format: date-time
@@ -2616,16 +3267,95 @@ components:
           format: date-time
         shippingAddress:
           type: string
-        city:
+        phoneNumber:
           type: string
-        district:
+        paymentUrl:
           type: string
-        ward:
+        paymentTransactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaymentTransactionResponse'
+    PaymentTransactionResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        amount:
+          type: integer
+          format: int64
+        paymentMethod:
           type: string
-        postalCode:
+          enum:
+          - COD
+          - VNPAY
+        providerTransactionId:
+          type: string
+        status:
+          type: string
+          enum:
+          - PENDING
+          - SUCCESS
+          - FAILED
+        createdAt:
+          type: string
+          format: date-time
+    OrderItemRequest:
+      required:
+      - price
+      - productName
+      - quantity
+      - variantSku
+      type: object
+      properties:
+        variantSku:
+          type: string
+        productName:
+          maxLength: 255
+          minLength: 0
+          type: string
+        variantName:
+          maxLength: 255
+          minLength: 0
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        price:
+          type: integer
+          format: int64
+    OrderRequest:
+      required:
+      - orderItems
+      - paymentMethod
+      - phoneNumber
+      - shippingAddress
+      - userId
+      type: object
+      properties:
+        userId:
+          type: string
+        orderItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItemRequest'
+        couponCode:
+          maxLength: 50
+          minLength: 0
+          type: string
+        shippingAddress:
           type: string
         phoneNumber:
           type: string
+        customerNote:
+          maxLength: 500
+          minLength: 0
+          type: string
+        paymentMethod:
+          type: string
+          enum:
+          - COD
+          - VNPAY
     ApiResponseOrderPreviewResponse:
       type: object
       properties:
@@ -2867,13 +3597,6 @@ components:
           maxLength: 100
           minLength: 0
           type: string
-    AdminReplyRequest:
-      required:
-      - comment
-      type: object
-      properties:
-        comment:
-          type: string
     UpdateQuantityRequest:
       required:
       - quantity
@@ -2882,59 +3605,6 @@ components:
         quantity:
           type: integer
           format: int32
-    Pageable:
-      type: object
-      properties:
-        page:
-          minimum: 0
-          type: integer
-          format: int32
-        size:
-          minimum: 1
-          type: integer
-          format: int32
-        sort:
-          type: array
-          items:
-            type: string
-    ApiResponseListWishlistResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-        timestamp:
-          type: string
-          format: date-time
-        status:
-          type: integer
-          format: int32
-        message:
-          type: string
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/WishlistResponse'
-        pagination:
-          $ref: '#/components/schemas/PaginationInfo'
-    ApiResponseListProductReviewResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-        timestamp:
-          type: string
-          format: date-time
-        status:
-          type: integer
-          format: int32
-        message:
-          type: string
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/ProductReviewResponse'
-        pagination:
-          $ref: '#/components/schemas/PaginationInfo'
     ApiResponseListUserAddressResponse:
       type: object
       properties:
@@ -2973,6 +3643,21 @@ components:
             $ref: '#/components/schemas/ProductResponse'
         pagination:
           $ref: '#/components/schemas/PaginationInfo'
+    Pageable:
+      type: object
+      properties:
+        page:
+          minimum: 0
+          type: integer
+          format: int32
+        size:
+          minimum: 1
+          type: integer
+          format: int32
+        sort:
+          type: array
+          items:
+            type: string
     ApiResponseInteger:
       type: object
       properties:
@@ -3067,11 +3752,11 @@ components:
     CsrfToken:
       type: object
       properties:
-        headerName:
+        parameterName:
           type: string
         token:
           type: string
-        parameterName:
+        headerName:
           type: string
     ApiResponseCsrfTokenResponse:
       type: object
@@ -3174,6 +3859,25 @@ components:
             $ref: '#/components/schemas/BrandResponse'
         pagination:
           $ref: '#/components/schemas/PaginationInfo'
+    ApiResponseListUserProfileResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserProfileResponse'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
     ApiResponseStockStatus:
       type: object
       properties:
@@ -3202,6 +3906,125 @@ components:
         locked:
           type: boolean
         lastSyncTimestamp:
+          type: integer
+          format: int64
+    AdminDashboardSummaryResponse:
+      type: object
+      properties:
+        totalRevenue:
+          type: integer
+          format: int64
+        totalOrders:
+          type: integer
+          format: int64
+        totalCustomers:
+          type: integer
+          format: int64
+        totalProducts:
+          type: integer
+          format: int64
+    ApiResponseAdminDashboardSummaryResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/AdminDashboardSummaryResponse'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+    ApiResponseListRevenueChartItem:
+      type: object
+      properties:
+        success:
+          type: boolean
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/RevenueChartItem'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+    RevenueChartItem:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        revenue:
+          type: integer
+          format: int64
+    ApiResponseListOrderStatusStat:
+      type: object
+      properties:
+        success:
+          type: boolean
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderStatusStat'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+    OrderStatusStat:
+      type: object
+      properties:
+        status:
+          type: string
+        count:
+          type: integer
+          format: int64
+    ApiResponseListBestSellerItem:
+      type: object
+      properties:
+        success:
+          type: boolean
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/BestSellerItem'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+    BestSellerItem:
+      type: object
+      properties:
+        productName:
+          type: string
+        sku:
+          type: string
+        soldQuantity:
+          type: integer
+          format: int32
+        revenue:
           type: integer
           format: int64
   securitySchemes:

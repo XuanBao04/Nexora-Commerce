@@ -65,7 +65,7 @@ print_section "Connection Info"
 echo -e "  Database:  ${COLOR_GREEN}postgres://${POSTGRES_USER}@localhost:${POSTGRES_PORT}/${POSTGRES_DB}${COLOR_RESET}"
 echo -e "  Redis:     ${COLOR_GREEN}redis://localhost:${REDIS_PORT}${COLOR_RESET}"
 echo -e "  Backend:   ${COLOR_GREEN}http://localhost:${SERVER_PORT}${COLOR_RESET}"
-echo -e "  Swagger:   ${COLOR_GREEN}http://localhost:${SERVER_PORT}/swagger-ui.html${COLOR_RESET}"
+echo -e "  Swagger:   ${COLOR_GREEN}http://localhost:${SERVER_PORT}/api/swagger-ui.html${COLOR_RESET}"
 echo ""
 
 # Run Spring Boot dev with Maven

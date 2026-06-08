@@ -6,25 +6,25 @@
 
 SHELL := /bin/bash
 
-# Load environment variables from .env
+# Nạp các biến môi trường từ file .env
 ifneq (,$(wildcard .env))
     include .env
     export
 endif
 
-# Colors
+# Định nghĩa bảng màu sắc
 BLUE := \033[1;34m
 GREEN := \033[1;32m
 CYAN := \033[1;36m
 YELLOW := \033[1;33m
 RESET := \033[0m
 
-# Default target
+# Mục tiêu mặc định
 .DEFAULT_GOAL := help
 
-help: ## Show this help
+help: ## Hiển thị hướng dẫn sử dụng chi tiết
 	@echo -e "$(CYAN)╔════════════════════════════════════════════════════╗$(RESET)"
-	@echo -e "$(CYAN)║  Nexora Commerce - Development Scripts             ║$(RESET)"
+	@echo -e "$(CYAN)║  Nexora Commerce - Các Lệnh Hỗ Trợ Phát Triển     ║$(RESET)"
 	@echo -e "$(CYAN)╚════════════════════════════════════════════════════╝$(RESET)"
 	@echo ""
 	@echo -e "$(YELLOW)FRONTEND:$(RESET)"
@@ -36,98 +36,98 @@ help: ## Show this help
 	@echo -e "$(YELLOW)DOCKER:$(RESET)"
 	@grep "^docker-" $(MAKEFILE_LIST) | sed 's/^.*:.*##/  /' | sed 's/docker-//'
 	@echo ""
-	@echo -e "$(YELLOW)FULLSTACK (QUICK):$(RESET)"
+	@echo -e "$(YELLOW)FULLSTACK (NHANH):$(RESET)"
 	@grep "^[a-z]*:.*##" $(MAKEFILE_LIST) | grep -v "^fe-\|^be-\|^docker-" | sed 's/:.*##/  /' 
 	@echo ""
 
 # ============================================================================
-# FRONTEND TARGETS
+# CÁC LỆNH CHO FRONTEND
 # ============================================================================
 
-fe-dev: ## Frontend: Run development server locally
+fe-dev: ## Chạy dev server cho frontend ở máy cục bộ
 	@bash scripts/frontend/dev.sh
 
-fe-build: ## Frontend: Build dist for production
+fe-build: ## Biên dịch (build) thư mục dist cho production
 	@bash scripts/frontend/build.sh
 
-fe-docker-build: ## Frontend: Build Docker image
+fe-docker-build: ## Build Docker image cho frontend
 	@bash scripts/frontend/docker-build.sh
 
-fe-logs: ## Frontend: View container logs
+fe-logs: ## Xem logs của container frontend
 	@bash scripts/frontend/logs.sh
 
-fe-stop: ## Frontend: Stop container
+fe-stop: ## Dừng container frontend
 	@bash scripts/frontend/stop.sh
 
 # ============================================================================
-# BACKEND TARGETS
+# CÁC LỆNH CHO BACKEND
 # ============================================================================
 
-be-dev: ## Backend: Run development server locally
+be-dev: ## Chạy dev server cho backend ở máy cục bộ
 	@bash scripts/backend/dev.sh
 
-be-build: ## Backend: Build JAR package
+be-build: ## Biên dịch (build) file JAR cho backend
 	@bash scripts/backend/build.sh
 
-be-docker-build: ## Backend: Build Docker image
+be-docker-build: ## Build Docker image cho backend
 	@bash scripts/backend/docker-build.sh
 
-be-logs: ## Backend: View container logs
+be-logs: ## Xem logs của container backend
 	@bash scripts/backend/logs.sh
 
-be-stop: ## Backend: Stop container
+be-stop: ## Dừng container backend
 	@bash scripts/backend/stop.sh
 
 # ============================================================================
-# DOCKER TARGETS
+# CÁC LỆNH DOCKER CHUNG
 # ============================================================================
 
-docker-build: ## Docker: Build all images (frontend + backend)
+docker-build: ## Build tất cả các Docker image (frontend + backend)
 	@bash scripts/docker/build.sh --all
 
-docker-up: ## Docker: Start all containers
+docker-up: ## Khởi chạy tất cả các container dịch vụ
 	@bash scripts/docker/up.sh
 
-docker-down: ## Docker: Stop all containers
+docker-down: ## Dừng và gỡ bỏ tất cả các container dịch vụ
 	@bash scripts/docker/down.sh
 
-docker-clean: ## Docker: Remove unused images & volumes
+docker-clean: ## Xóa bỏ các Docker image và volume không sử dụng
 	@bash scripts/docker/clean.sh --all
 
-docker-logs: ## Docker: View system logs (all services)
+docker-logs: ## Xem logs hệ thống của tất cả dịch vụ
 	@bash scripts/docker/logs.sh all
 
 # ============================================================================
-# FULLSTACK SHORTCUTS (RECOMMENDED)
+# LỆNH RÚT GỌN CHO CẢ HỆ THỐNG FULLSTACK (KHUYÊN DÙNG)
 # ============================================================================
 
-build: ## Build: Frontend + Backend (local + Docker images)
+build: ## Build toàn bộ Frontend + Backend (cục bộ + Docker images)
 	@bash scripts/fullstack/build.sh --docker
 
-start: ## Start: Begin all services (containers)
+start: ## Khởi chạy toàn bộ hệ thống các dịch vụ (container)
 	@bash scripts/fullstack/start.sh
 
-stop: ## Stop: Halt all services
+stop: ## Dừng toàn bộ hệ thống các dịch vụ
 	@bash scripts/fullstack/stop.sh
 
-restart: ## Restart: Stop & start all services
+restart: ## Khởi động lại toàn bộ hệ thống các dịch vụ
 	@bash scripts/fullstack/restart.sh
 
-logs: ## Logs: View all service logs
+logs: ## Xem logs của tất cả dịch vụ đang chạy
 	@bash scripts/fullstack/logs.sh all
 
-status: ## Status: Show running containers
+status: ## Hiển thị danh sách các container đang chạy và trạng thái của chúng
 	@docker compose -f docker/docker-compose.yml -f docker/docker-compose.dev.yml ps
 
-clean: ## Clean: Full system cleanup (containers + images + volumes)
+clean: ## Dọn dẹp sạch sẽ hệ thống (gồm container, images, volumes)
 	@bash scripts/docker/down.sh --volumes
 	@bash scripts/docker/clean.sh --prune
 
 # ============================================================================
-# DEVELOPMENT CONVENIENCE
+# TIỆN ÍCH PHÁT TRIỂN (CONVENIENCE)
 # ============================================================================
 
-dev-all: ## Dev: Start DB + Redis, then dev servers (frontend + backend)
+dev-all: ## Khởi động DB + Redis trước, sau đó chỉ dẫn chạy dev server
 	@echo -e "$(BLUE)Starting Infrastructure...$(RESET)"
 	@docker compose -f docker/docker-compose.yml -f docker/docker-compose.dev.yml up -d db redis
 	@echo ""
@@ -137,58 +137,58 @@ dev-all: ## Dev: Start DB + Redis, then dev servers (frontend + backend)
 	@echo -e "  Terminal 1: $(GREEN)make be-dev$(RESET)    # Backend on :8080"
 	@echo -e "  Terminal 2: $(GREEN)make fe-dev$(RESET)    # Frontend on :5173"
 
-info: ## Info: Show configuration & URLs
+info: ## Hiển thị thông tin cấu hình cổng chạy và các địa chỉ URL dự án
 	@echo ""
 	@echo -e "$(CYAN)Project Configuration:$(RESET)"
 	@echo -e "  Frontend:  $(GREEN)http://localhost:5173$(RESET)"
 	@echo -e "  Backend:   $(GREEN)http://localhost:8080$(RESET)"
-	@echo -e "  Swagger:   $(GREEN)http://localhost:8080/swagger-ui.html$(RESET)"
+	@echo -e "  Swagger:   $(GREEN)http://localhost:8080/api/swagger-ui.html$(RESET)"
 	@echo -e "  Database:  $(GREEN)postgres://localhost:5432$(RESET)"
 	@echo -e "  Redis:     $(GREEN)redis://localhost:6379$(RESET)"
 	@echo ""
 
 # ============================================================================
-# PRODUCTION
+# MÔI TRƯỜNG PRODUCTION
 # ============================================================================
 
-prod-build: ## Prod: Build all for production
+prod-build: ## Build toàn bộ hệ thống cho môi trường production
 	@COMPOSE_ENV=prod bash scripts/fullstack/build.sh --docker --skip-tests
 
-prod-start: ## Prod: Start production stack
+prod-start: ## Khởi chạy toàn bộ hệ thống ở môi trường production
 	@COMPOSE_ENV=prod bash scripts/fullstack/start.sh
 
-prod-stop: ## Prod: Stop production stack
+prod-stop: ## Dừng hoạt động toàn bộ hệ thống ở môi trường production
 	@COMPOSE_ENV=prod bash scripts/fullstack/stop.sh
 
-prod-logs: ## Prod: View production logs
+prod-logs: ## Xem logs hệ thống ở môi trường production
 	@COMPOSE_ENV=prod bash scripts/fullstack/logs.sh all
 
 # ============================================================================
-# UTILITIES
+# TIỆN ÍCH HỆ THỐNG
 # ============================================================================
 
-shell-backend: ## Util: Shell into backend container
+shell-backend: ## Truy cập terminal bên trong container backend
 	@docker compose -f docker/docker-compose.yml -f docker/docker-compose.dev.yml exec backend sh
 
-shell-frontend: ## Util: Shell into frontend container
+shell-frontend: ## Truy cập terminal bên trong container frontend
 	@docker compose -f docker/docker-compose.yml -f docker/docker-compose.dev.yml exec frontend sh
 
-shell-db: ## Util: Connect to PostgreSQL database
+shell-db: ## Truy cập trực tiếp dòng lệnh PostgreSQL của cơ sở dữ liệu
 	@docker compose -f docker/docker-compose.yml -f docker/docker-compose.dev.yml exec db psql -U $${POSTGRES_USER} -d $${POSTGRES_DB}
 
-redis-cli: ## Util: Connect to Redis
+redis-cli: ## Truy cập trực tiếp dòng lệnh Redis CLI
 	@docker compose -f docker/docker-compose.yml -f docker/docker-compose.dev.yml exec redis redis-cli -a $${REDIS_PASSWORD}
 
-test-backend: ## Test: Run backend tests
+test-backend: ## Chạy bộ kiểm thử (unit tests) của backend
 	@cd backend && mvn test
 
-test-frontend: ## Test: Run frontend tests
+test-frontend: ## Chạy bộ kiểm thử (unit tests) của frontend
 	@cd frontend && pnpm test
 
-lint-frontend: ## Lint: Run frontend linter
+lint-frontend: ## Kiểm tra lỗi cú pháp và định dạng frontend (Linter)
 	@cd frontend && pnpm lint
 
-format-frontend: ## Format: Format frontend code
+format-frontend: ## Tự động định dạng code frontend (Prettier)
 	@cd frontend && pnpm format
 
 .SILENT: help

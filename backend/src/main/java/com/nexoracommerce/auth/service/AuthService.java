@@ -7,7 +7,7 @@ import com.nexoracommerce.auth.dto.response.AuthResponse;
 /**
  * Service interface for Authentication operations
  */
-public interface IAuthService {
+public interface AuthService {
     
     AuthResponse login(LoginRequest request);
 

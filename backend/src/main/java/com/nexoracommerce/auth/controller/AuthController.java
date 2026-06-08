@@ -3,7 +3,7 @@ package com.nexoracommerce.auth.controller;
 import com.nexoracommerce.auth.dto.request.LoginRequest;
 import com.nexoracommerce.auth.dto.request.RegisterRequest;
 import com.nexoracommerce.auth.dto.response.AuthResponse;
-import com.nexoracommerce.auth.service.IAuthService;
+import com.nexoracommerce.auth.service.AuthService;
 import com.nexoracommerce.common.annotation.RateLimited;
 import com.nexoracommerce.common.response.ApiResponse;
 import jakarta.servlet.http.HttpServletResponse;
@@ -36,7 +36,7 @@ public class AuthController {
 
     private static final String REFRESH_TOKEN_COOKIE_NAME = "refresh_token";
 
-    private final IAuthService authService;
+    private final AuthService authService;
 
     @Value("${jwt.refresh-token-expiration}")
     private long refreshTokenExpirationMs;

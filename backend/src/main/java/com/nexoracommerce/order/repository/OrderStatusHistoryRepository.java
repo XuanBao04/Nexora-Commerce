@@ -30,24 +30,25 @@ public interface OrderStatusHistoryRepository extends BaseRepository<OrderStatus
      * Find the latest status change for an order
      */
     @Query("""
-            select osh
-            from OrderStatusHistory osh
-            where osh.order.id = :orderId
-            order by osh.createdAt desc
-            limit 1
-            """)
+        SELECT osh 
+        FROM OrderStatusHistory osh 
+        WHERE osh.order.id = :orderId 
+        ORDER BY osh.createdAt DESC 
+        LIMIT 1
+    """)
     Optional<OrderStatusHistory> findLatestStatusChangeByOrder(@Param("orderId") String orderId);
 
     /**
      * Find when order reached a specific status
      */
     @Query("""
-            select osh
-            from OrderStatusHistory osh
-            where osh.order.id = :orderId and osh.status = :status
-            order by osh.createdAt asc
-            limit 1
-            """)
+        SELECT osh 
+        FROM OrderStatusHistory osh 
+        WHERE osh.order.id = :orderId 
+          AND osh.status = :status 
+        ORDER BY osh.createdAt ASC 
+        LIMIT 1
+    """)
     Optional<OrderStatusHistory> findFirstStatusChange(@Param("orderId") String orderId,
                                                        @Param("status") OrderStatus status);
 
@@ -80,11 +81,12 @@ public interface OrderStatusHistoryRepository extends BaseRepository<OrderStatus
      * Find all orders that reached a specific status by a certain date
      */
     @Query("""
-            select osh
-            from OrderStatusHistory osh
-            where osh.status = :status and osh.createdAt <= :date
-            order by osh.createdAt desc
-            """)
+        SELECT osh 
+        FROM OrderStatusHistory osh 
+        WHERE osh.status = :status 
+          AND osh.createdAt <= :date 
+        ORDER BY osh.createdAt DESC
+    """)
     List<OrderStatusHistory> findStatusReachedByDate(@Param("status") OrderStatus status,
                                                      @Param("date") LocalDateTime date);
 }

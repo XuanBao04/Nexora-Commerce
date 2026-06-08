@@ -3,7 +3,7 @@ package com.nexoracommerce.inventory.controller;
 import com.nexoracommerce.common.response.ApiResponse;
 import com.nexoracommerce.inventory.dto.request.UpdateStockRequest;
 import com.nexoracommerce.inventory.dto.response.InventoryResponse;
-import com.nexoracommerce.inventory.service.IInventoryService;
+import com.nexoracommerce.inventory.service.InventoryService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
@@ -35,7 +35,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @Tag(name = "Inventory Module", description = "Endpoints for stock management, availability checking, reservations, and admin inventory operations")
 public class InventoryController {
 
-    private final IInventoryService inventoryService;
+    private final InventoryService inventoryService;
 
     /**
      * GET /api/v1/inventories/{productId} - Get full inventory details

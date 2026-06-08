@@ -9,7 +9,7 @@ import com.nexoracommerce.coupon.mapper.CouponMapper;
 import com.nexoracommerce.common.exception.BusinessLogicException;
 import com.nexoracommerce.common.exception.ResourceNotFoundException;
 import com.nexoracommerce.coupon.repository.CouponRepository;
-import com.nexoracommerce.coupon.service.ICouponService;
+import com.nexoracommerce.coupon.service.CouponService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -24,22 +24,18 @@ import java.util.Objects;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class CouponServiceImpl implements ICouponService {
-    
+public class CouponServiceImpl implements CouponService {
+
     private final CouponRepository couponRepository;
     private final CouponMapper couponMapper;
-    
+
     private static final ZoneId VN_TIMEZONE = ZoneId.of("Asia/Ho_Chi_Minh");
     private static final int MAX_DISCOUNT_PERCENT = 100;
     private static final int MIN_DISCOUNT_PERCENT = 1;
 
-    // ======================== Coupon Validation ========================
-
     @Override
     public Coupon validateAndGetCoupon(String couponCode, Long orderAmount) {
-        if (isBlankCouponCode(couponCode)) {
-            return null;  // No coupon provided
-        }
+        if (isBlank(couponCode)) return null;
 
         validateOrderAmount(orderAmount);
 
@@ -54,17 +50,11 @@ public class CouponServiceImpl implements ICouponService {
 
     @Override
     public boolean isCouponValid(String couponCode) {
-        if (isBlankCouponCode(couponCode)) {
-            return false;
-        }
+        if (isBlank(couponCode)) return false;
 
         try {
-            Coupon coupon = couponRepository.findById(java.util.Objects.requireNonNull(couponCode)).orElse(null);
-
-            if (coupon == null) {
-                return false;
-            }
-
+            Coupon coupon = couponRepository.findById(Objects.requireNonNull(couponCode)).orElse(null);
+            if (coupon == null) return false;
             return isCouponActive(coupon) && !isCouponExpired(coupon);
         } catch (Exception e) {
             log.warn("Error validating coupon: {}", couponCode, e);
@@ -72,28 +62,19 @@ public class CouponServiceImpl implements ICouponService {
         }
     }
 
-    // ======================== Discount Calculation ========================
-
     @Override
     public Long calculateDiscount(String couponCode, Long orderAmount) {
         Coupon coupon = validateAndGetCoupon(couponCode, orderAmount);
-        if (coupon == null) {
-            return 0L;
-        }
+        if (coupon == null) return 0L;
 
         long discountAmount = (orderAmount * coupon.getDiscountPercent()) / 100;
-        
-        // Cap discount at order amount to prevent negative final price
         return Math.min(discountAmount, orderAmount);
     }
-
-    // ======================== CRUD Operations ========================
 
     @Override
     public Coupon getCouponByCode(String couponCode) {
         validateCouponCodeNotBlank(couponCode);
-        
-        return couponRepository.findById(java.util.Objects.requireNonNull(couponCode))
+        return couponRepository.findById(Objects.requireNonNull(couponCode))
                 .orElseThrow(() -> new ResourceNotFoundException(MessageConstant.Coupon.NOT_FOUND + couponCode));
     }
 
@@ -114,8 +95,7 @@ public class CouponServiceImpl implements ICouponService {
         }
 
         Coupon coupon = couponMapper.toEntity(request);
-        Coupon saved = couponRepository.save(java.util.Objects.requireNonNull(coupon));
-        return couponMapper.toResponse(saved);
+        return couponMapper.toResponse(couponRepository.save(Objects.requireNonNull(coupon)));
     }
 
     @Override
@@ -126,143 +106,89 @@ public class CouponServiceImpl implements ICouponService {
     @Override
     @Transactional
     public CouponResponse updateCoupon(String code, UpdateCouponRequest request) {
-        Objects.requireNonNull(request, "Coupon update request data cannot be null");
+        Objects.requireNonNull(request, "Coupon update request cannot be null");
         validateCouponCodeNotBlank(code);
 
-        Coupon existing = couponRepository.findById(java.util.Objects.requireNonNull(code))
+        Coupon existing = couponRepository.findById(Objects.requireNonNull(code))
                 .orElseThrow(() -> new ResourceNotFoundException(MessageConstant.Coupon.NOT_FOUND + code));
 
-        if (request.discountPercent() != null) {
-            validateDiscountPercent(request.discountPercent());
-        }
-        if (request.minimumOrderAmount() != null) {
-            validateMinimumOrderAmount(request.minimumOrderAmount());
-        }
-        if (request.expiryDate() != null) {
-            validateExpiryDate(request.expiryDate());
-        }
+        if (request.discountPercent() != null) validateDiscountPercent(request.discountPercent());
+        if (request.minimumOrderAmount() != null) validateMinimumOrderAmount(request.minimumOrderAmount());
+        if (request.expiryDate() != null) validateExpiryDate(request.expiryDate());
 
         couponMapper.updateEntityFromRequest(request, existing);
-
-        Coupon saved = couponRepository.save(java.util.Objects.requireNonNull(existing));
-        return couponMapper.toResponse(saved);
+        return couponMapper.toResponse(couponRepository.save(existing));
     }
 
     @Override
     @Transactional
     public void deleteCoupon(String code) {
         validateCouponCodeNotBlank(code);
-
-        if (!couponRepository.existsById(java.util.Objects.requireNonNull(code))) {
+        if (!couponRepository.existsById(Objects.requireNonNull(code))) {
             throw new ResourceNotFoundException(MessageConstant.Coupon.NOT_FOUND + code);
         }
-
-        couponRepository.deleteById(java.util.Objects.requireNonNull(code));
+        couponRepository.deleteById(code);
         log.info("Deleted coupon: {}", code);
     }
 
-    // ======================== Private Validation Methods ========================
-
-    /**
-     * Validate coupon code is not null or empty
-     */
     private void validateCouponCodeNotBlank(String couponCode) {
-        if (couponCode == null || couponCode.trim().isEmpty()) {
+        if (isBlank(couponCode)) {
             throw new BusinessLogicException(MessageConstant.Coupon.CODE_REQUIRED);
         }
     }
 
-    /**
-     * Check if coupon code is blank
-     */
-    private boolean isBlankCouponCode(String couponCode) {
-        return couponCode == null || couponCode.trim().isEmpty();
+    private boolean isBlank(String str) {
+        return str == null || str.trim().isEmpty();
     }
 
-    /**
-     * Validate discount percent is within valid range
-     */
     private void validateDiscountPercent(Integer percent) {
         if (percent == null || percent < MIN_DISCOUNT_PERCENT || percent > MAX_DISCOUNT_PERCENT) {
             throw new BusinessLogicException(
-                String.format(MessageConstant.Coupon.DISCOUNT_RANGE, MIN_DISCOUNT_PERCENT, MAX_DISCOUNT_PERCENT)
-            );
+                String.format(MessageConstant.Coupon.DISCOUNT_RANGE, MIN_DISCOUNT_PERCENT, MAX_DISCOUNT_PERCENT));
         }
     }
 
-    /**
-     * Validate order amount is not null and positive
-     */
     private void validateOrderAmount(Long orderAmount) {
         if (orderAmount == null || orderAmount <= 0) {
             throw new BusinessLogicException(MessageConstant.Coupon.INVALID_ORDER_AMOUNT);
         }
     }
 
-    /**
-     * Validate minimum order amount is not negative
-     */
     private void validateMinimumOrderAmount(Long minAmount) {
         if (minAmount != null && minAmount < 0) {
             throw new BusinessLogicException(MessageConstant.Coupon.MIN_ORDER_AMOUNT_NEGATIVE);
         }
     }
 
-    /**
-     * Validate coupon meets minimum order amount requirement
-     */
     private void validateMinimumOrderAmount(Coupon coupon, Long orderAmount) {
         if (orderAmount < coupon.getMinimumOrderAmount()) {
             throw new BusinessLogicException(
                 String.format(MessageConstant.Coupon.MIN_ORDER_REQUIRED,
-                    coupon.getMinimumOrderAmount(), orderAmount)
-            );
+                    coupon.getMinimumOrderAmount(), orderAmount));
         }
     }
 
-    /**
-     * Validate coupon state (active and not expired)
-     */
     private void validateCouponState(Coupon coupon) {
         if (!isCouponActive(coupon)) {
             throw new BusinessLogicException(MessageConstant.Coupon.INACTIVE + coupon.getCode());
         }
-
         if (isCouponExpired(coupon)) {
             throw new BusinessLogicException(MessageConstant.Coupon.EXPIRED + coupon.getCode());
         }
     }
 
-    /**
-     * Check if coupon is active
-     */
     private boolean isCouponActive(Coupon coupon) {
         return coupon.getActive() != null && coupon.getActive();
     }
 
-    /**
-     * Check if coupon is expired
-     */
     private boolean isCouponExpired(Coupon coupon) {
-        if (coupon.getExpiryDate() == null) {
-            return false;
-        }
-        return getCurrentTime().isAfter(coupon.getExpiryDate());
+        if (coupon.getExpiryDate() == null) return false;
+        return LocalDateTime.now(VN_TIMEZONE).isAfter(coupon.getExpiryDate());
     }
 
-    /**
-     * Validate expiry date is not in the past
-     */
     private void validateExpiryDate(LocalDateTime expiryDate) {
-        if (expiryDate != null && expiryDate.isBefore(getCurrentTime())) {
+        if (expiryDate != null && expiryDate.isBefore(LocalDateTime.now(VN_TIMEZONE))) {
             throw new BusinessLogicException(MessageConstant.Coupon.FUTURE_EXPIRY);
         }
-    }
-
-    /**
-     * Get current time in Vietnam timezone
-     */
-    private LocalDateTime getCurrentTime() {
-        return LocalDateTime.now(VN_TIMEZONE);
     }
 }

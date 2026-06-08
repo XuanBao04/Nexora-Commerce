@@ -1,4 +1,4 @@
-// Export all services from a single entry point
+// Gom các dịch vụ API dùng chung
 export {
   default as apiClient,
   getAccessToken,
@@ -6,4 +6,3 @@ export {
   setAccessToken,
 } from './api/apiClient';
 export * from './api/responseInterceptor';
-export { checkoutService } from './checkoutService';

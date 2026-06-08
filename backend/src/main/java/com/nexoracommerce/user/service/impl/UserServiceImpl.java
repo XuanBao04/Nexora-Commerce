@@ -11,7 +11,7 @@ import com.nexoracommerce.user.entity.UserAddress;
 import com.nexoracommerce.user.mapper.UserMapper;
 import com.nexoracommerce.user.repository.UserAddressRepository;
 import com.nexoracommerce.user.repository.UserRepository;
-import com.nexoracommerce.user.service.IUserService;
+import com.nexoracommerce.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class UserServiceImpl implements IUserService {
+public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final UserAddressRepository userAddressRepository;
@@ -64,8 +64,7 @@ public class UserServiceImpl implements IUserService {
             user.setPassword(passwordEncoder.encode(request.password().trim()));
         }
 
-        User updatedUser = userRepository.save(user);
-        return userMapper.toProfileResponse(updatedUser);
+        return userMapper.toProfileResponse(userRepository.save(user));
     }
 
     @Override
@@ -85,11 +84,10 @@ public class UserServiceImpl implements IUserService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
 
         List<UserAddress> existingAddresses = userAddressRepository.findByUserId(userId);
-        boolean isFirstAddress = existingAddresses.isEmpty();
-        boolean makeDefault = isFirstAddress || Boolean.TRUE.equals(request.isDefault());
+        boolean makeDefault = existingAddresses.isEmpty() || Boolean.TRUE.equals(request.isDefault());
 
+        // Bỏ default cũ nếu cần đặt default mới
         if (makeDefault) {
-            // Unset existing default address if any
             userAddressRepository.findByUserIdAndIsDefaultTrue(userId)
                     .ifPresent(addr -> {
                         addr.setIsDefault(false);
@@ -105,8 +103,7 @@ public class UserServiceImpl implements IUserService {
                 .isDefault(makeDefault)
                 .build();
 
-        UserAddress savedAddress = userAddressRepository.save(address);
-        return userMapper.toAddressResponse(savedAddress);
+        return userMapper.toAddressResponse(userAddressRepository.save(address));
     }
 
     @Override
@@ -125,7 +122,6 @@ public class UserServiceImpl implements IUserService {
 
         boolean makeDefault = Boolean.TRUE.equals(request.isDefault());
         if (makeDefault && !Boolean.TRUE.equals(address.getIsDefault())) {
-            // Unset existing default address if any
             userAddressRepository.findByUserIdAndIsDefaultTrue(userId)
                     .ifPresent(addr -> {
                         addr.setIsDefault(false);
@@ -133,10 +129,9 @@ public class UserServiceImpl implements IUserService {
                     });
             address.setIsDefault(true);
         } else if (!makeDefault && Boolean.TRUE.equals(address.getIsDefault())) {
-            // Do not allow unsetting the default address if it's the only one
+            // Nếu bỏ default → chuyển default sang địa chỉ khác
             List<UserAddress> existingAddresses = userAddressRepository.findByUserId(userId);
             if (existingAddresses.size() > 1) {
-                // Set another address as default
                 existingAddresses.stream()
                         .filter(addr -> !addr.getId().equals(addressId))
                         .findFirst()
@@ -152,8 +147,7 @@ public class UserServiceImpl implements IUserService {
         address.setPhoneNumber(request.phoneNumber().trim());
         address.setAddressLine(request.addressLine().trim());
 
-        UserAddress updatedAddress = userAddressRepository.save(address);
-        return userMapper.toAddressResponse(updatedAddress);
+        return userMapper.toAddressResponse(userAddressRepository.save(address));
     }
 
     @Override
@@ -173,8 +167,8 @@ public class UserServiceImpl implements IUserService {
         boolean wasDefault = Boolean.TRUE.equals(address.getIsDefault());
         userAddressRepository.delete(address);
 
+        // Tự động đặt default cho địa chỉ còn lại
         if (wasDefault) {
-            // Set another address as default if available
             List<UserAddress> remaining = userAddressRepository.findByUserId(userId);
             if (!remaining.isEmpty()) {
                 UserAddress newDefault = remaining.get(0);

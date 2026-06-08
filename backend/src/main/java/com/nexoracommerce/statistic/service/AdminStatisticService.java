@@ -6,7 +6,7 @@ import com.nexoracommerce.statistic.dto.response.OrderStatusStat;
 import com.nexoracommerce.statistic.dto.response.RevenueChartItem;
 import java.util.List;
 
-public interface IAdminStatisticService {
+public interface AdminStatisticService {
     AdminDashboardSummaryResponse getDashboardSummary();
     List<RevenueChartItem> getRevenueChart(int days);
     List<BestSellerItem> getBestSellers(int limit);

@@ -7,7 +7,7 @@ import com.nexoracommerce.statistic.dto.response.AdminDashboardSummaryResponse;
 import com.nexoracommerce.statistic.dto.response.BestSellerItem;
 import com.nexoracommerce.statistic.dto.response.OrderStatusStat;
 import com.nexoracommerce.statistic.dto.response.RevenueChartItem;
-import com.nexoracommerce.statistic.service.IAdminStatisticService;
+import com.nexoracommerce.statistic.service.AdminStatisticService;
 import com.nexoracommerce.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -24,7 +24,7 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class AdminStatisticServiceImpl implements IAdminStatisticService {
+public class AdminStatisticServiceImpl implements AdminStatisticService {
 
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;

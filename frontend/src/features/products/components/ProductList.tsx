@@ -1,14 +1,19 @@
-import { useEffect, useState, useTransition, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { productService } from '@features/products/services/productService';
 import { categoryService } from '@features/products/services/categoryService';
 import { brandService } from '@features/products/services/brandService';
 import { Product, CategoryResponse, BrandResponse } from '../types/product';
 import ProductCard from './ProductCard';
 import { ProductDetailModal } from './ProductDetailModal';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { flattenCategoryTree } from '../utils/categoryHelper';
-import { FaChevronLeft, FaChevronRight, FaSearch, FaStore, FaSlidersH, FaTimes } from 'react-icons/fa';
+import { FaChevronLeft, FaChevronRight, FaStore, FaSlidersH, FaTimes } from 'react-icons/fa';
 
 const ProductList = () => {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const initialSearch = searchParams.get('search') || '';
+
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,9 +27,7 @@ const ProductList = () => {
   
   const flatCategories = useMemo(() => flattenCategoryTree(categories), [categories]);
   const [selectedBrand, setSelectedBrand] = useState<number | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [, startTransition] = useTransition();
+  const [debouncedSearch, setDebouncedSearch] = useState(initialSearch);
 
   // Price Filters State
   const [minPriceInput, setMinPriceInput] = useState<string>('');
@@ -32,6 +35,7 @@ const ProductList = () => {
   const [debouncedMinPrice, setDebouncedMinPrice] = useState<number | null>(null);
   const [debouncedMaxPrice, setDebouncedMaxPrice] = useState<number | null>(null);
   const [priceError, setPriceError] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<string>('id,desc');
 
   // Currency Masking helper functions
   const formatNumberWithCommas = (value: string) => {
@@ -45,8 +49,19 @@ const ProductList = () => {
     return cleanValue ? Number(cleanValue) : null;
   };
 
-  // Validation and Debounce Effect for Price Inputs
+  // Validation for Price Inputs (Real-time check, does not auto-filter)
   useEffect(() => {
+    const rawMin = getRawNumber(minPriceInput);
+    const rawMax = getRawNumber(maxPriceInput);
+
+    if (rawMin !== null && rawMax !== null && rawMin > rawMax) {
+      setPriceError('Giá tối thiểu không được lớn hơn giá tối đa');
+    } else {
+      setPriceError(null);
+    }
+  }, [minPriceInput, maxPriceInput]);
+
+  const handleApplyPriceFilter = () => {
     const rawMin = getRawNumber(minPriceInput);
     const rawMax = getRawNumber(maxPriceInput);
 
@@ -56,15 +71,18 @@ const ProductList = () => {
     }
 
     setPriceError(null);
+    setDebouncedMinPrice(rawMin);
+    setDebouncedMaxPrice(rawMax);
+    setCurrentPage(0);
+  };
 
-    const handler = setTimeout(() => {
-      setDebouncedMinPrice(rawMin);
-      setDebouncedMaxPrice(rawMax);
+  useEffect(() => {
+    const urlSearch = searchParams.get('search');
+    if (urlSearch !== null && urlSearch !== debouncedSearch) {
+      setDebouncedSearch(urlSearch);
       setCurrentPage(0);
-    }, 400);
-
-    return () => clearTimeout(handler);
-  }, [minPriceInput, maxPriceInput]);
+    }
+  }, [searchParams]);
 
   // Detail Modal state
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -75,20 +93,7 @@ const ProductList = () => {
   const [totalElements, setTotalElements] = useState(0);
   const pageSize = 12;
 
-  // Search input change with debounce transition
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setSearchTerm(value);
-    
-    // Simulate simple 300ms debounce
-    const handler = setTimeout(() => {
-      startTransition(() => {
-        setDebouncedSearch(value);
-        setCurrentPage(0);
-      });
-    }, 300);
-    return () => clearTimeout(handler);
-  };
+
 
   // Fetch Category Tree and Brands on mount
   useEffect(() => {
@@ -118,7 +123,7 @@ const ProductList = () => {
         const response = await productService.getAllProductsPaginated(
           currentPage,
           pageSize,
-          'id',
+          sortBy,
           debouncedSearch,
           selectedCategory,
           selectedBrand,
@@ -137,7 +142,7 @@ const ProductList = () => {
     };
 
     fetchProducts();
-  }, [currentPage, debouncedSearch, selectedCategory, selectedBrand, debouncedMinPrice, debouncedMaxPrice, priceError]);
+  }, [currentPage, debouncedSearch, selectedCategory, selectedBrand, debouncedMinPrice, debouncedMaxPrice, priceError, sortBy]);
 
   const handlePageChange = (page: number) => {
     if (page >= 0 && page < totalPages) {
@@ -149,14 +154,20 @@ const ProductList = () => {
   const handleClearFilters = () => {
     setSelectedCategory(null);
     setSelectedBrand(null);
-    setSearchTerm('');
     setDebouncedSearch('');
     setMinPriceInput('');
     setMaxPriceInput('');
     setDebouncedMinPrice(null);
     setDebouncedMaxPrice(null);
     setPriceError(null);
+    setSortBy('id,desc');
     setCurrentPage(0);
+    
+    if (searchParams.has('search')) {
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('search');
+      navigate({ search: newParams.toString() });
+    }
   };
 
 
@@ -167,7 +178,6 @@ const ProductList = () => {
 
   return (
     <div className="animate-fade-in space-y-8 lg:space-y-10">
-      
       {/* Editorial Header Section */}
       <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end border-b border-zinc-150 pb-6">
         <div className="space-y-2">
@@ -181,20 +191,6 @@ const ProductList = () => {
               : "Không tìm thấy sản phẩm nào phù hợp với bộ lọc"
             }
           </p>
-        </div>
-
-        {/* Search input with live synch */}
-        <div className="relative w-full md:w-80">
-          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
-            <FaSearch className="h-3.5 w-3.5" />
-          </div>
-          <input
-            type="text"
-            placeholder="Tìm sản phẩm theo tên..."
-            value={searchTerm}
-            onChange={handleSearchChange}
-            className="w-full pl-10 pr-4 h-11 bg-zinc-50 border border-zinc-200/60 focus:bg-white focus:border-zinc-950 focus:ring-4 focus:ring-zinc-900/5 rounded-xl text-xs font-semibold outline-none transition duration-200 text-zinc-800 placeholder:text-zinc-400"
-          />
         </div>
       </div>
 
@@ -213,7 +209,7 @@ const ProductList = () => {
               setSelectedCategory(e.target.value ? Number(e.target.value) : null);
               setCurrentPage(0);
             }}
-            className="h-10 px-3.5 bg-zinc-50 border border-zinc-200/60 hover:border-zinc-300 focus:bg-white focus:border-zinc-950 rounded-xl text-xs font-bold text-zinc-600 outline-none transition"
+            className="h-10 px-3.5 bg-zinc-50 border border-zinc-200/60 hover:border-zinc-300 focus:bg-white focus:border-zinc-950 rounded-xl text-xs font-bold text-zinc-600 outline-none transition cursor-pointer"
           >
             <option value="">Tất cả danh mục</option>
             {flatCategories.map((cat) => (
@@ -230,7 +226,7 @@ const ProductList = () => {
               setSelectedBrand(e.target.value ? Number(e.target.value) : null);
               setCurrentPage(0);
             }}
-            className="h-10 px-3.5 bg-zinc-50 border border-zinc-200/60 hover:border-zinc-300 focus:bg-white focus:border-zinc-950 rounded-xl text-xs font-bold text-zinc-600 outline-none transition"
+            className="h-10 px-3.5 bg-zinc-50 border border-zinc-200/60 hover:border-zinc-300 focus:bg-white focus:border-zinc-950 rounded-xl text-xs font-bold text-zinc-600 outline-none transition cursor-pointer"
           >
             <option value="">Tất cả thương hiệu</option>
             {brands.map((brand) => (
@@ -247,6 +243,7 @@ const ProductList = () => {
               placeholder="Giá tối thiểu..."
               value={minPriceInput}
               onChange={(e) => setMinPriceInput(formatNumberWithCommas(e.target.value))}
+              onKeyDown={(e) => e.key === 'Enter' && handleApplyPriceFilter()}
               className="h-10 w-28 sm:w-32 px-3.5 bg-zinc-50 border border-zinc-200/60 focus:bg-white focus:border-zinc-950 rounded-xl text-xs font-bold text-zinc-800 outline-none transition placeholder:text-zinc-400"
             />
             <span className="text-[10px] font-bold text-zinc-400">—</span>
@@ -255,21 +252,48 @@ const ProductList = () => {
               placeholder="Giá tối đa..."
               value={maxPriceInput}
               onChange={(e) => setMaxPriceInput(formatNumberWithCommas(e.target.value))}
+              onKeyDown={(e) => e.key === 'Enter' && handleApplyPriceFilter()}
               className="h-10 w-28 sm:w-32 px-3.5 bg-zinc-50 border border-zinc-200/60 focus:bg-white focus:border-zinc-950 rounded-xl text-xs font-bold text-zinc-800 outline-none transition placeholder:text-zinc-400"
             />
+            <button
+              onClick={handleApplyPriceFilter}
+              className="h-10 px-4 bg-zinc-950 hover:bg-zinc-850 hover:text-amber-200 text-white rounded-xl text-xs font-bold active:scale-95 transition"
+            >
+              Áp dụng
+            </button>
           </div>
         </div>
 
-        {/* Clear Filters Button */}
-        {(selectedCategory !== null || selectedBrand !== null || searchTerm.trim() !== '' || minPriceInput !== '' || maxPriceInput !== '') && (
-          <button
-            onClick={handleClearFilters}
-            className="h-10 px-4 bg-zinc-100 hover:bg-zinc-200 text-zinc-600 rounded-xl text-xs font-extrabold flex items-center gap-1.5 active:scale-95 transition"
-          >
-            <FaTimes className="w-2.5 h-2.5" />
-            <span>Xóa lọc</span>
-          </button>
-        )}
+        {/* Right side alignment: Sort By and Clear Filters */}
+        <div className="flex items-center gap-3">
+          {/* Sort By Dropdown */}
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest hidden sm:inline">Sắp xếp:</span>
+            <select
+              value={sortBy}
+              onChange={(e) => {
+                setSortBy(e.target.value);
+                setCurrentPage(0);
+              }}
+              className="h-10 px-3.5 bg-zinc-50 border border-zinc-200/60 hover:border-zinc-300 focus:bg-white focus:border-zinc-950 rounded-xl text-xs font-bold text-zinc-600 outline-none transition cursor-pointer"
+            >
+              <option value="id,desc">Mới nhất</option>
+              <option value="variants.price,asc">Giá: Thấp đến Cao</option>
+              <option value="variants.price,desc">Giá: Cao đến Thấp</option>
+            </select>
+          </div>
+
+          {/* Clear Filters Button */}
+          {(selectedCategory !== null || selectedBrand !== null || debouncedSearch.trim() !== '' || minPriceInput !== '' || maxPriceInput !== '') && (
+            <button
+              onClick={handleClearFilters}
+              className="h-10 px-4 bg-zinc-100 hover:bg-zinc-200 text-zinc-600 rounded-xl text-xs font-extrabold flex items-center gap-1.5 active:scale-95 transition"
+            >
+              <FaTimes className="w-2.5 h-2.5" />
+              <span>Xóa lọc</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {priceError && (
@@ -322,14 +346,17 @@ const ProductList = () => {
         </div>
       )}
 
-      {/* Pagination Controls */}
+      {/* Premium Pagination Controls */}
       {!isLoading && totalPages > 1 && (
-        <div className="flex flex-col items-center justify-center gap-4 border-t border-zinc-200/50 pt-10 sm:flex-row">
+        <div className="flex flex-col items-center justify-between gap-4 border-t border-zinc-200/50 pt-10 sm:flex-row">
+          <p className="text-xs font-semibold text-zinc-400">
+            Hiển thị trang <span className="font-extrabold text-zinc-950">{currentPage + 1}</span> trên tổng số <span className="font-extrabold text-zinc-950">{totalPages}</span> trang
+          </p>
           <div className="flex items-center gap-1.5 rounded-2xl bg-white/80 p-1.5 shadow-sm border border-zinc-200/50 backdrop-blur-sm">
             <button
               onClick={() => handlePageChange(currentPage - 1)}
               disabled={currentPage === 0}
-              className="icon-btn border-0 shadow-none hover:bg-zinc-100 disabled:opacity-30"
+              className="flex h-10 w-10 items-center justify-center rounded-xl border-0 bg-transparent text-zinc-500 hover:bg-zinc-100 hover:text-zinc-950 transition active:scale-95 disabled:opacity-30 disabled:pointer-events-none"
               title="Trang trước"
             >
               <FaChevronLeft className="h-3.5 w-3.5" />
@@ -339,10 +366,10 @@ const ProductList = () => {
               <button
                 key={page}
                 onClick={() => handlePageChange(page)}
-                className={`h-10 w-10 rounded-xl text-xs font-bold transition-all duration-200 ${
+                className={`h-10 w-10 rounded-xl text-xs font-black transition-all duration-300 active:scale-90 ${
                   currentPage === page
-                    ? 'bg-zinc-950 text-white shadow-md'
-                    : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950'
+                    ? 'bg-zinc-950 text-amber-200 shadow-lg shadow-zinc-950/15'
+                    : 'text-zinc-500 hover:bg-zinc-150/70 hover:text-zinc-950'
                 }`}
               >
                 {page + 1}
@@ -352,7 +379,7 @@ const ProductList = () => {
             <button
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage === totalPages - 1}
-              className="icon-btn border-0 shadow-none hover:bg-zinc-100 disabled:opacity-30"
+              className="flex h-10 w-10 items-center justify-center rounded-xl border-0 bg-transparent text-zinc-500 hover:bg-zinc-100 hover:text-zinc-950 transition active:scale-95 disabled:opacity-30 disabled:pointer-events-none"
               title="Trang sau"
             >
               <FaChevronRight className="h-3.5 w-3.5" />

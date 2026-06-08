@@ -3,8 +3,8 @@ package com.nexoracommerce.redis.controller;
 import com.nexoracommerce.common.response.ApiResponse;
 import com.nexoracommerce.redis.dto.StockStatus;
 import com.nexoracommerce.redis.dto.request.StockQuantityRequest;
-import com.nexoracommerce.redis.service.IRedisStockService;
-import com.nexoracommerce.redis.service.IStockSyncService;
+import com.nexoracommerce.redis.service.RedisStockService;
+import com.nexoracommerce.redis.service.StockSyncService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -24,8 +24,8 @@ import org.springframework.web.bind.annotation.RestController;
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminStockController {
 
-    private final IRedisStockService redisStockService;
-    private final IStockSyncService stockSyncService;
+    private final RedisStockService redisStockService;
+    private final StockSyncService stockSyncService;
 
     @GetMapping("/{productId}")
     public ResponseEntity<ApiResponse<StockStatus>> getProductStock(@PathVariable String productId) {

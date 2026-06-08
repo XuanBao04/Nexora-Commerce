@@ -9,34 +9,27 @@ import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
 
-
+@Slf4j
 @Aspect
 @Component
-@Slf4j
 public class LoggingAspect {
 
-   
     @Around("execution(* com.nexoracommerce..service.impl.*.*(..))")
     public Object logExecutionTime(ProceedingJoinPoint joinPoint) throws Throwable {
         MethodSignature methodSignature = (MethodSignature) joinPoint.getSignature();
         String className = methodSignature.getDeclaringType().getSimpleName();
         String methodName = methodSignature.getName();
-        Object[] args = joinPoint.getArgs();
 
-        log.info("==> Entering: {}.{} with arguments: {}", className, methodName, Arrays.toString(args));
-
+        log.info("==> Entering: {}.{} with arguments: {}", className, methodName, Arrays.toString(joinPoint.getArgs()));
         long start = System.currentTimeMillis();
 
         try {
             Object result = joinPoint.proceed();
-            long executionTime = System.currentTimeMillis() - start;
-
-            log.info("<== Exiting: {}.{} | Execution Time: {} ms", className, methodName, executionTime);
+            log.info("<== Exiting: {}.{} | Execution Time: {} ms", className, methodName, System.currentTimeMillis() - start);
             return result;
         } catch (Throwable throwable) {
-            long executionTime = System.currentTimeMillis() - start;
-            log.error("!!! Exception in {}.{} | After {} ms | Message: {}", 
-                    className, methodName, executionTime, throwable.getMessage());
+            log.error("!!! Exception in {}.{} | After {} ms | Message: {}",
+                    className, methodName, System.currentTimeMillis() - start, throwable.getMessage());
             throw throwable;
         }
     }

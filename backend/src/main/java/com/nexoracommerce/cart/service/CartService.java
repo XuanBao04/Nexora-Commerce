@@ -6,7 +6,7 @@ import com.nexoracommerce.cart.dto.request.CartItemRequest;
 /**
  * Service interface for Cart operations
  */
-public interface ICartService {
+public interface CartService {
 
     /**
      * Get cart for a specific user

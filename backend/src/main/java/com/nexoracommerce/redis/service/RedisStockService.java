@@ -1,6 +1,6 @@
 package com.nexoracommerce.redis.service;
 
-public interface IRedisStockService {
+public interface RedisStockService {
     long getStock(String productId);
 
     void setStock(String productId, long quantity);

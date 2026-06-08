@@ -2,7 +2,7 @@ package com.nexoracommerce.user.controller;
 
 import com.nexoracommerce.common.response.ApiResponse;
 import com.nexoracommerce.user.dto.response.UserProfileResponse;
-import com.nexoracommerce.user.service.IUserService;
+import com.nexoracommerce.user.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -28,7 +28,7 @@ import java.util.List;
 @Tag(name = "Admin User Module", description = "Endpoints for admin to manage users")
 public class AdminUserController {
 
-    private final IUserService userService;
+    private final UserService userService;
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")

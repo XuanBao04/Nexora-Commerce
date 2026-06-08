@@ -22,24 +22,24 @@ export default function PriceBreakdown({
       <div className="space-y-3.5 text-xs font-semibold text-zinc-500">
         <div className="flex justify-between gap-4">
           <span className="uppercase tracking-wider">Tổng giá trị sản phẩm</span>
-          <span className="font-extrabold text-zinc-900" data-testid="subtotal-display">{formatPrice(subtotal)} VND</span>
+          <span className="font-extrabold text-zinc-900" data-testid="subtotal-display">{formatPrice(subtotal)}</span>
         </div>
 
         {discountAmount > 0 && (
           <div className="flex justify-between gap-4 font-bold text-emerald-600 rounded-lg border border-emerald-100 bg-emerald-50/50 p-2.5">
             <span className="uppercase tracking-wider">Giảm giá {couponCode ? `(${couponCode})` : ""}</span>
-            <span className="font-extrabold" data-testid="discount-display">-{formatPrice(discountAmount)} VND</span>
+            <span className="font-extrabold" data-testid="discount-display">-{formatPrice(discountAmount)}</span>
           </div>
         )}
 
         <div className="flex justify-between gap-4">
           <span className="uppercase tracking-wider">Phí vận chuyển</span>
-          <span className="font-extrabold text-zinc-900" data-testid="shipping-fee-display">{formatPrice(shippingFee)} VND</span>
+          <span className="font-extrabold text-zinc-900" data-testid="shipping-fee-display">{formatPrice(shippingFee)}</span>
         </div>
 
         <div className="flex justify-between gap-4 border-t border-zinc-200/60 pt-3.5 font-bold text-zinc-950">
           <span className="uppercase tracking-widest text-zinc-900">Tổng cộng</span>
-          <span className="text-base font-black text-zinc-950" data-testid="total-price-display">{formatPrice(totalPrice)} VND</span>
+          <span className="text-base font-black text-zinc-950" data-testid="total-price-display">{formatPrice(totalPrice)}</span>
         </div>
       </div>
     );
@@ -52,7 +52,7 @@ export default function PriceBreakdown({
       <div className="space-y-4">
         <div className="flex justify-between gap-4 text-xs font-semibold text-zinc-500">
           <span className="uppercase tracking-wider">Tổng giá trị sản phẩm</span>
-          <span className="font-extrabold text-zinc-800" data-testid="subtotal-display">{formatPrice(subtotal)} VND</span>
+          <span className="font-extrabold text-zinc-800" data-testid="subtotal-display">{formatPrice(subtotal)}</span>
         </div>
 
         {discountAmount > 0 && (
@@ -61,20 +61,20 @@ export default function PriceBreakdown({
               Khuyến mãi {couponCode && `(${couponCode})`}
             </span>
             <span className="font-black text-emerald-600" data-testid="discount-display">
-              -{formatPrice(discountAmount)} VND
+              -{formatPrice(discountAmount)}
             </span>
           </div>
         )}
 
         <div className="flex justify-between gap-4 text-xs font-semibold text-zinc-500">
           <span className="uppercase tracking-wider">Phí vận chuyển cố định</span>
-          <span className="font-extrabold text-zinc-800" data-testid="shipping-fee-display">{formatPrice(shippingFee)} VND</span>
+          <span className="font-extrabold text-zinc-800" data-testid="shipping-fee-display">{formatPrice(shippingFee)}</span>
         </div>
 
         <div className="flex justify-between gap-4 border-t border-zinc-200/60 pt-4 items-center">
           <span className="text-xs font-black text-zinc-900 uppercase tracking-widest">Tổng thanh toán</span>
           <span className="text-lg font-black text-zinc-950" data-testid="total-price-display">
-            {formatPrice(totalPrice)} VND
+            {formatPrice(totalPrice)}
           </span>
         </div>
       </div>

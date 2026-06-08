@@ -4,102 +4,55 @@ import com.nexoracommerce.common.enums.OrderStatus;
 import com.nexoracommerce.order.dto.request.OrderRequest;
 import com.nexoracommerce.order.dto.request.OrderStatusChangeRequest;
 import com.nexoracommerce.order.dto.response.OrderResponse;
-import com.nexoracommerce.order.dto.response.OrderPreviewResponse;
-import com.nexoracommerce.order.dto.response.OrderStatusHistoryResponse;
+import com.nexoracommerce.payment.enums.PaymentStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
-import java.util.List;
+import java.time.LocalDateTime;
+import java.util.UUID;
+import com.nexoracommerce.order.dto.response.OrderPreviewResponse;
 
 /**
- * Service interface for Order operations
+ * Interface cung cấp các tác vụ xử lý đơn hàng
  */
-public interface IOrderService {
-
+public interface OrderService {
     /**
-     * Create a new order
-     * @param request OrderRequest containing order details and items
-     * @param userId the user creating the order
-     * @return created OrderResponse
+     * Tạo đơn hàng mới
      */
     OrderResponse createOrder(OrderRequest request, String userId);
 
     /**
-     * Get order by ID
-     * @param orderId the order ID
-     * @return OrderResponse with full details
-     */
-    OrderResponse getOrderById(String orderId);
-
-    /**
-     * Get all orders for a user
-     * @param userId the user ID
-     * @return list of OrderResponse
-     */
-    List<OrderResponse> getUserOrders(String userId);
-
-    /**
-     * Get all orders for a user with pagination
-     * @param userId the user ID
-     * @param pageable pagination parameters
-     * @return Page of OrderResponse
-     */
-    Page<OrderResponse> getUserOrdersPageable(String userId, Pageable pageable);
-
-    /**
-     * Cancel an order
-     * @param orderId the order ID
-     * @return updated OrderResponse
-     */
-    OrderResponse cancelOrder(String orderId);
-
-    /**
-     * Update order status with audit trail
-     * @param request containing orderId, newStatus, and optional reason
-     * @return updated OrderResponse
-     */
-    OrderResponse updateOrderStatus(OrderStatusChangeRequest request);
-
-    /**
-     * Get order status history
-     * @param orderId the order ID
-     * @return list of OrderStatusHistoryResponse
-     */
-    List<OrderStatusHistoryResponse> getOrderStatusHistory(String orderId);
-
-    /**
-     * Preview order price before checkout
-     * @param request OrderRequest containing order details
-     * @return OrderPreviewResponse with price breakdown
+     * Xem trước thông tin giá trị đơn hàng
      */
     OrderPreviewResponse previewOrder(OrderRequest request);
 
     /**
-     * Get all orders (admin only)
-     * @return list of all OrderResponse
+     * Lấy chi tiết đơn hàng cho Admin
      */
-    List<OrderResponse> getAllOrders();
+    OrderResponse getOrderByIdForAdmin(String orderId);
 
     /**
-     * Get all orders with pagination (admin only)
-     * @param pageable pagination parameters
-     * @return Page of OrderResponse
+     * Lấy chi tiết đơn hàng cho User (có kiểm tra quyền)
      */
-    Page<OrderResponse> getAllOrdersPageable(Pageable pageable);
+    OrderResponse getOrderById(String orderId, String userId);
 
     /**
-     * Get orders by status with pagination
-     * @param status the order status
-     * @param pageable pagination parameters
-     * @return Page of OrderResponse
+     * Lấy danh sách đơn hàng có bộ lọc linh hoạt (cho Admin và User)
      */
-    Page<OrderResponse> getOrdersByStatus(OrderStatus status, Pageable pageable);
+    Page<OrderResponse> getOrdersWithFilters(String userId, OrderStatus status, PaymentStatus paymentStatus, String couponCode, LocalDateTime startDate, LocalDateTime endDate, Long minPrice, Pageable pageable);
 
     /**
-     * Get unpaid orders for a user
-     * @param userId the user ID
-     * @param pageable pagination parameters
-     * @return Page of OrderResponse
+     * Cập nhật trạng thái đơn hàng (cho Admin)
      */
-    Page<OrderResponse> getUnpaidOrdersByUser(String userId, Pageable pageable);
+    OrderResponse updateOrderStatus(String orderId, OrderStatusChangeRequest request);
+
+    /**
+     * Hủy đơn hàng (cho User)
+     */
+    OrderResponse cancelOrder(String orderId, String userId, String reason);
+
+    /**
+     * Lấy lịch sử trạng thái đơn hàng
+     */
+    java.util.List<com.nexoracommerce.order.dto.response.OrderStatusHistoryResponse> getOrderStatusHistory(String orderId);
 }

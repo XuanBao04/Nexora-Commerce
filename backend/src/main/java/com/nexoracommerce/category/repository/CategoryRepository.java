@@ -2,6 +2,7 @@ package com.nexoracommerce.category.repository;
 
 import com.nexoracommerce.category.entity.Category;
 import com.nexoracommerce.common.repository.BaseRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,4 +16,11 @@ public interface CategoryRepository extends BaseRepository<Category, Long> {
     boolean existsBySlug(String slug);
     boolean existsBySlugAndIdNot(String slug, Long id);
     List<Category> findByParentIsNull(); // Get all root categories
+
+    @Query("""
+        SELECT DISTINCT c 
+        FROM Category c 
+        LEFT JOIN FETCH c.children
+    """)
+    List<Category> findAllWithChildren();
 }

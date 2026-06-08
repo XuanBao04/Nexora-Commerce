@@ -2,7 +2,7 @@ package com.nexoracommerce.checkout.controller;
 
 import com.nexoracommerce.checkout.dto.PaymentRequest;
 import com.nexoracommerce.checkout.dto.PaymentResponse;
-import com.nexoracommerce.checkout.service.ICheckoutService;
+import com.nexoracommerce.checkout.service.CheckoutService;
 import com.nexoracommerce.common.response.ApiResponse;
 import com.nexoracommerce.order.dto.request.OrderRequest;
 import com.nexoracommerce.order.dto.response.OrderResponse;
@@ -33,7 +33,7 @@ import jakarta.servlet.http.HttpServletRequest;
 @Tag(name = "Checkout Module", description = "Endpoints for order checkout process, Redis-protected inventory reservation, and payment processing")
 public class CheckoutController {
 
-    private final ICheckoutService checkoutService;
+    private final CheckoutService checkoutService;
 
     /**
      * POST /api/v1/checkouts - Initiate checkout with Redis-based inventory protection
@@ -96,5 +96,35 @@ public class CheckoutController {
             @Valid @RequestBody PaymentRequest paymentRequest) {
         PaymentResponse response = checkoutService.processPayment(orderId, paymentRequest.successful(), null, null, null);
         return ResponseEntity.ok(ApiResponse.ok(response, response.message()));
+    }
+
+    /**
+     * POST /api/v1/checkouts/orders/{orderId}/repay - Repay an unpaid/failed order
+     * Generates a new VNPay payment URL for an existing pending unpaid order.
+     */
+    @PostMapping("/orders/{orderId}/repay")
+    @PreAuthorize("hasRole('ADMIN') or @orderSecurity.isOwnerOfOrder(authentication, #orderId)")
+    @SecurityRequirement(name = "bearerAuth")
+    @Operation(
+        summary = "Generate a new payment URL to retry payment",
+        description = "Generates a new VNPAY payment URL for an existing order that is PENDING and UNPAID."
+    )
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "New payment URL generated successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Order is already paid or not in pending status"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Order not found")
+    })
+    public ResponseEntity<ApiResponse<OrderResponse>> repayPayment(
+            @Parameter(description = "The order ID to repay", example = "ORD-001")
+            @PathVariable String orderId,
+            HttpServletRequest httpServletRequest) {
+        
+        String ipAddress = httpServletRequest.getHeader("X-Forwarded-For");
+        if (ipAddress == null || ipAddress.isEmpty() || "unknown".equalsIgnoreCase(ipAddress)) {
+            ipAddress = httpServletRequest.getRemoteAddr();
+        }
+        
+        OrderResponse response = checkoutService.repayPayment(orderId, ipAddress);
+        return ResponseEntity.ok(ApiResponse.ok(response, "New payment URL generated successfully."));
     }
 }

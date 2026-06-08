@@ -2,7 +2,7 @@ package com.nexoracommerce.product.controller;
 
 import com.nexoracommerce.common.response.ApiResponse;
 import com.nexoracommerce.product.dto.response.ProductResponse;
-import com.nexoracommerce.product.service.IProductService;
+import com.nexoracommerce.product.service.ProductService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -28,7 +28,7 @@ import java.util.List;
 @Tag(name = "Admin Product Module", description = "Endpoints for admin to manage products")
 public class AdminProductController {
 
-    private final IProductService productService;
+    private final ProductService productService;
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -45,7 +45,7 @@ public class AdminProductController {
             @RequestParam(required = false) Long maxPrice,
             @PageableDefault(size = 10, sort = "id", direction = Sort.Direction.DESC) Pageable pageable) {
         
-        // Hard limit protection against DoS
+        
         if (pageable.getPageSize() > 100) {
             pageable = PageRequest.of(pageable.getPageNumber(), 100, pageable.getSort());
         }

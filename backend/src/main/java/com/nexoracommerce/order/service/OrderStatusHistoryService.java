@@ -9,7 +9,7 @@ import java.util.List;
 /**
  * Service interface for Order Status History tracking
  */
-public interface IOrderStatusHistoryService {
+public interface OrderStatusHistoryService {
 
     /**
      * Record a status change for an order

@@ -33,12 +33,12 @@ public interface PaymentTransactionRepository extends BaseRepository<PaymentTran
      * Find the latest payment transaction for an order
      */
     @Query("""
-            select pt
-            from PaymentTransaction pt
-            where pt.order.id = :orderId
-            order by pt.createdAt desc
-            limit 1
-            """)
+        SELECT pt 
+        FROM PaymentTransaction pt 
+        WHERE pt.order.id = :orderId 
+        ORDER BY pt.createdAt DESC 
+        LIMIT 1
+    """)
     Optional<PaymentTransaction> findLatestPaymentTransaction(@Param("orderId") String orderId);
 
     /**
@@ -80,20 +80,20 @@ public interface PaymentTransactionRepository extends BaseRepository<PaymentTran
      * Sum of successful payment amounts
      */
     @Query("""
-            select coalesce(sum(pt.amount), 0)
-            from PaymentTransaction pt
-            where pt.status = :status
-            """)
+        SELECT COALESCE(SUM(pt.amount), 0) 
+        FROM PaymentTransaction pt 
+        WHERE pt.status = :status
+    """)
     long getTotalAmountByStatus(@Param("status") TransactionStatus status);
 
     /**
      * Sum of payment amounts by payment method
      */
     @Query("""
-            select coalesce(sum(pt.amount), 0)
-            from PaymentTransaction pt
-            where pt.paymentMethod = :paymentMethod
-            """)
+        SELECT COALESCE(SUM(pt.amount), 0) 
+        FROM PaymentTransaction pt 
+        WHERE pt.paymentMethod = :paymentMethod
+    """)
     long getTotalAmountByPaymentMethod(@Param("paymentMethod") PaymentMethod paymentMethod);
 
     /**
@@ -105,11 +105,12 @@ public interface PaymentTransactionRepository extends BaseRepository<PaymentTran
      * Find successful transactions in a date range
      */
     @Query("""
-            select pt
-            from PaymentTransaction pt
-            where pt.status = :status and pt.createdAt between :startDate and :endDate
-            order by pt.createdAt desc
-            """)
+        SELECT pt 
+        FROM PaymentTransaction pt 
+        WHERE pt.status = :status 
+          AND pt.createdAt BETWEEN :startDate AND :endDate 
+        ORDER BY pt.createdAt DESC
+    """)
     Page<PaymentTransaction> findSuccessfulTransactionsByDateRange(@Param("status") TransactionStatus status,
                                                                     @Param("startDate") LocalDateTime startDate,
                                                                     @Param("endDate") LocalDateTime endDate,
@@ -119,11 +120,11 @@ public interface PaymentTransactionRepository extends BaseRepository<PaymentTran
      * Find failed transactions
      */
     @Query("""
-            select pt
-            from PaymentTransaction pt
-            where pt.status = :status
-            order by pt.createdAt desc
-            """)
+        SELECT pt 
+        FROM PaymentTransaction pt 
+        WHERE pt.status = :status 
+        ORDER BY pt.createdAt DESC
+    """)
     Page<PaymentTransaction> findFailedTransactions(@Param("status") TransactionStatus status, Pageable pageable);
 
     /**
@@ -139,16 +140,19 @@ public interface PaymentTransactionRepository extends BaseRepository<PaymentTran
     /**
      * Get average transaction amount
      */
-    @Query("select coalesce(avg(pt.amount), 0) from PaymentTransaction pt")
+    @Query("""
+        SELECT COALESCE(AVG(pt.amount), 0) 
+        FROM PaymentTransaction pt
+    """)
     double getAverageTransactionAmount();
 
     /**
      * Get average transaction amount by payment method
      */
     @Query("""
-            select coalesce(avg(pt.amount), 0)
-            from PaymentTransaction pt
-            where pt.paymentMethod = :paymentMethod
-            """)
+        SELECT COALESCE(AVG(pt.amount), 0) 
+        FROM PaymentTransaction pt 
+        WHERE pt.paymentMethod = :paymentMethod
+    """)
     double getAverageTransactionAmountByPaymentMethod(@Param("paymentMethod") PaymentMethod paymentMethod);
 }

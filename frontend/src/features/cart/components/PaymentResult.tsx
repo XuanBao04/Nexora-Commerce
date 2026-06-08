@@ -1,9 +1,39 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { FaCheckCircle, FaTimesCircle, FaArrowRight } from "react-icons/fa";
+import { QRCodeSVG } from "qrcode.react";
 
 import { toast } from "react-toastify";
 import { API_CONFIG } from "@/utils/constants";
+import { orderService } from "@/features/orders/services/orderService";
+
+const PENDING_VNPAY_PAYMENT_KEY = "nexora_pending_vnpay_payment";
+
+type PendingVnpayPayment = {
+  orderId: string;
+  paymentUrl: string;
+  totalPrice: number;
+  createdAt: string;
+};
+
+const loadPendingPayment = (): PendingVnpayPayment | null => {
+  const rawValue = sessionStorage.getItem(PENDING_VNPAY_PAYMENT_KEY);
+
+  if (!rawValue) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(rawValue) as PendingVnpayPayment;
+  } catch {
+    sessionStorage.removeItem(PENDING_VNPAY_PAYMENT_KEY);
+    return null;
+  }
+};
+
+const clearPendingPayment = () => {
+  sessionStorage.removeItem(PENDING_VNPAY_PAYMENT_KEY);
+};
 
 const buildVnpayReturnUrl = (queryString: string) => {
   const baseUrl = API_CONFIG.BASE_URL.replace(/\/$/, "");
@@ -20,13 +50,20 @@ const PaymentResult = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [status, setStatus] = useState<'SUCCESS' | 'FAILED' | 'PENDING'>('PENDING');
+  const [pendingPayment, setPendingPayment] = useState<PendingVnpayPayment | null>(null);
+  const [isRepaying, setIsRepaying] = useState(false);
 
   useEffect(() => {
     const nexoraResult = searchParams.get('nexora_Result');
-    // Check parameters from VNPAY
+    // Kiểm tra tham số từ VNPAY
     const vnp_ResponseCode = searchParams.get('vnp_ResponseCode');
+    const pending = loadPendingPayment();
 
     if (nexoraResult !== null) {
+      if (pending) {
+        setPendingPayment(pending);
+      }
+      clearPendingPayment();
       if (nexoraResult === 'SUCCESS') {
         setStatus('SUCCESS');
         toast.success("Thanh toán thành công!");
@@ -36,17 +73,52 @@ const PaymentResult = () => {
       }
       return;
     }
+
+    if (pending) {
+      setPendingPayment(pending);
+      setStatus('PENDING');
+      return;
+    }
     
-    // VNPAY Success Code is '00'
+    // '00' là mã giao dịch thành công của VNPAY
     if (vnp_ResponseCode !== null) {
       setStatus('PENDING');
       window.location.replace(buildVnpayReturnUrl(searchParams.toString()));
       return;
     }
 
-    // If no clear parameters, maybe it failed or it was just a manual visit
+    // Mặc định thất bại nếu không có tham số hợp lệ
     setStatus('FAILED');
   }, [searchParams]);
+
+  const handleRepay = async () => {
+    if (!pendingPayment) return;
+    setIsRepaying(true);
+    try {
+      const response = await orderService.repayPayment(pendingPayment.orderId);
+      if (response.paymentUrl) {
+        // Lưu thông tin thanh toán mới để quét lại khi return về
+        sessionStorage.setItem(PENDING_VNPAY_PAYMENT_KEY, JSON.stringify({
+          orderId: response.id,
+          paymentUrl: response.paymentUrl,
+          totalPrice: response.totalPrice,
+          createdAt: response.createdAt
+        }));
+        window.location.href = response.paymentUrl;
+      } else {
+        toast.error("Không thể tạo liên kết thanh toán mới.");
+      }
+    } catch (err: Error | unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Thao tác thanh toán lại thất bại.";
+      toast.error(errorMessage);
+    } finally {
+      setIsRepaying(false);
+    }
+  };
+
+  const pendingAmountLabel = pendingPayment
+    ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(pendingPayment.totalPrice)
+    : null;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-zinc-50 p-6 animate-fade-in">
@@ -70,6 +142,59 @@ const PaymentResult = () => {
             <p className="text-sm font-medium text-zinc-500">
               Giao dịch của bạn đã bị hủy hoặc xảy ra lỗi trong quá trình thanh toán. Vui lòng thử lại.
             </p>
+
+            {pendingPayment && (
+              <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4 space-y-3 text-left">
+                <div className="flex items-center justify-between gap-4 text-xs font-bold uppercase tracking-widest text-zinc-400">
+                  <span>Mã đơn hàng</span>
+                  <span>{pendingPayment.orderId}</span>
+                </div>
+                <div className="flex items-center justify-between gap-4 text-sm font-extrabold text-zinc-900">
+                  <span>Tổng thanh toán</span>
+                  <span>{pendingAmountLabel}</span>
+                </div>
+                <button
+                  onClick={handleRepay}
+                  disabled={isRepaying}
+                  className="btn-primary w-full h-10 uppercase tracking-widest text-[10px] font-bold mt-2"
+                >
+                  {isRepaying ? "Đang tạo liên kết..." : "Thử thanh toán lại"}
+                </button>
+              </div>
+            )}
+          </>
+        ) : pendingPayment ? (
+          <>
+            <div className="space-y-3">
+              <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-indigo-100">
+                <QRCodeSVG value={pendingPayment.paymentUrl} size={88} bgColor="transparent" fgColor="#4f46e5" />
+              </div>
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-indigo-200/60 bg-indigo-50/80 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-indigo-700">
+                VNPAY QR
+              </div>
+            </div>
+            <h1 className="text-2xl font-black text-zinc-900 tracking-tight">Quét QR để thanh toán</h1>
+            <p className="text-sm font-medium text-zinc-500">
+              Dùng ứng dụng VNPAY hoặc app ngân hàng hỗ trợ QR để quét mã và hoàn tất thanh toán test.
+            </p>
+
+            <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4 text-left space-y-2">
+              <div className="flex items-center justify-between gap-4 text-xs font-bold uppercase tracking-widest text-zinc-400">
+                <span>Mã đơn hàng</span>
+                <span>{pendingPayment.orderId}</span>
+              </div>
+              <div className="flex items-center justify-between gap-4 text-sm font-extrabold text-zinc-900">
+                <span>Tổng thanh toán</span>
+                <span>{pendingAmountLabel}</span>
+              </div>
+            </div>
+
+            <button
+              onClick={() => window.open(pendingPayment.paymentUrl, "_blank", "noopener,noreferrer")}
+              className="btn-primary w-full h-12 uppercase tracking-widest text-xs font-bold"
+            >
+              Mở cổng thanh toán
+            </button>
           </>
         ) : (
           <div className="py-12">

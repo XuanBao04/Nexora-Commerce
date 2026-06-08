@@ -22,11 +22,11 @@ public interface OrderItemRepository extends BaseRepository<OrderItem, Long> {
      * Find order items by order ID with variant details
      */
     @Query("""
-            select distinct oi
-            from OrderItem oi
-            left join fetch oi.variant
-            where oi.order.id = :orderId
-            """)
+        SELECT DISTINCT oi 
+        FROM OrderItem oi 
+        LEFT JOIN FETCH oi.variant 
+        WHERE oi.order.id = :orderId
+    """)
     List<OrderItem> findByOrderIdWithVariant(@Param("orderId") String orderId);
 
     /**
@@ -38,11 +38,11 @@ public interface OrderItemRepository extends BaseRepository<OrderItem, Long> {
      * Find all order items for a product
      */
     @Query("""
-            select oi
-            from OrderItem oi
-            where oi.variant.product.id = :productId
-            order by oi.id desc
-            """)
+        SELECT oi 
+        FROM OrderItem oi 
+        WHERE oi.variant.product.id = :productId 
+        ORDER BY oi.id DESC
+    """)
     List<OrderItem> findByProductId(@Param("productId") String productId);
 
     /**
@@ -53,27 +53,31 @@ public interface OrderItemRepository extends BaseRepository<OrderItem, Long> {
     /**
      * Sum total quantity for a variant across all orders
      */
-    @Query("select coalesce(sum(oi.quantity), 0) from OrderItem oi where oi.variant.sku = :variantSku")
+    @Query("""
+        SELECT COALESCE(SUM(oi.quantity), 0) 
+        FROM OrderItem oi 
+        WHERE oi.variant.sku = :variantSku
+    """)
     long getTotalQuantitySoldByVariant(@Param("variantSku") String variantSku);
 
     /**
      * Sum total revenue for a specific variant
      */
     @Query("""
-            select coalesce(sum(oi.quantity * oi.price), 0)
-            from OrderItem oi
-            where oi.variant.sku = :variantSku
-            """)
+        SELECT COALESCE(SUM(oi.quantity * oi.price), 0) 
+        FROM OrderItem oi 
+        WHERE oi.variant.sku = :variantSku
+    """)
     long getTotalRevenueByVariant(@Param("variantSku") String variantSku);
 
     /**
      * Sum total revenue for a product
      */
     @Query("""
-            select coalesce(sum(oi.quantity * oi.price), 0)
-            from OrderItem oi
-            where oi.variant.product.id = :productId
-            """)
+        SELECT COALESCE(SUM(oi.quantity * oi.price), 0) 
+        FROM OrderItem oi 
+        WHERE oi.variant.product.id = :productId
+    """)
     long getTotalRevenueByProduct(@Param("productId") String productId);
 
     /**
@@ -89,11 +93,17 @@ public interface OrderItemRepository extends BaseRepository<OrderItem, Long> {
     /**
      * Find best selling products aggregated completely at database-level.
      */
-    @Query("SELECT new com.nexoracommerce.statistic.dto.response.BestSellerItem(" +
-           "oi.productName, oi.variant.sku, CAST(SUM(oi.quantity) AS int), SUM(oi.quantity * oi.price)) " +
-           "FROM OrderItem oi " +
-           "WHERE oi.order.paymentStatus = 'PAID' " +
-           "GROUP BY oi.productName, oi.variant.sku " +
-           "ORDER BY SUM(oi.quantity) DESC")
+    @Query("""
+        SELECT new com.nexoracommerce.statistic.dto.response.BestSellerItem(
+            oi.productName, 
+            oi.variant.sku, 
+            CAST(SUM(oi.quantity) AS int), 
+            SUM(oi.quantity * oi.price)
+        ) 
+        FROM OrderItem oi 
+        WHERE oi.order.paymentStatus = 'PAID' 
+        GROUP BY oi.productName, oi.variant.sku 
+        ORDER BY SUM(oi.quantity) DESC
+    """)
     List<com.nexoracommerce.statistic.dto.response.BestSellerItem> findBestSellers(org.springframework.data.domain.Pageable pageable);
 }

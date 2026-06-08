@@ -5,7 +5,7 @@ import com.nexoracommerce.inventory.dto.response.InventoryResponse;
 /**
  * Service interface for Inventory management
  */
-public interface IInventoryService {
+public interface InventoryService {
 
     /**
      * Get full inventory details for a product

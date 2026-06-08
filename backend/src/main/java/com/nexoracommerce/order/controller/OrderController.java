@@ -5,7 +5,7 @@ import com.nexoracommerce.order.dto.request.OrderRequest;
 import com.nexoracommerce.order.dto.request.OrderStatusChangeRequest;
 import com.nexoracommerce.order.dto.response.OrderPreviewResponse;
 import com.nexoracommerce.order.dto.response.OrderResponse;
-import com.nexoracommerce.order.service.IOrderService;
+import com.nexoracommerce.order.service.OrderService;
 import com.nexoracommerce.common.enums.OrderStatus;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -39,7 +39,7 @@ import java.util.List;
 @Tag(name = "Order Module", description = "Endpoints for order calculation previews, creation, user history listings, cancellations, and status management")
 public class OrderController {
 
-    private final IOrderService orderService;
+    private final OrderService orderService;
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN') or @orderSecurity.isOwner(authentication, #request.userId())")
@@ -91,7 +91,7 @@ public class OrderController {
     })
     public ResponseEntity<ApiResponse<List<OrderResponse>>> getAllOrders(
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<OrderResponse> orderPage = orderService.getAllOrdersPageable(pageable);
+        Page<OrderResponse> orderPage = orderService.getOrdersWithFilters(null, null, null, null, null, null, null, pageable);
         return ResponseEntity.ok(
                 ApiResponse.okWithPagination(
                         orderPage.getContent(),
@@ -116,7 +116,7 @@ public class OrderController {
             @Parameter(description = "Customer ID associated with orders", example = "USR-001")
             @RequestParam String userId,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<OrderResponse> orderPage = orderService.getUserOrdersPageable(userId, pageable);
+        Page<OrderResponse> orderPage = orderService.getOrdersWithFilters(userId, null, null, null, null, null, null, pageable);
         return ResponseEntity.ok(
                 ApiResponse.okWithPagination(
                         orderPage.getContent(),
@@ -140,8 +140,10 @@ public class OrderController {
     })
     public ResponseEntity<ApiResponse<OrderResponse>> getOrderById(
             @Parameter(description = "Order ID to look up", example = "ORD-20260523-999")
-            @PathVariable String orderId) {
-        OrderResponse response = orderService.getOrderById(orderId);
+            @PathVariable String orderId,
+            @Parameter(description = "User ID", example = "USR-001")
+            @RequestParam String userId) {
+        OrderResponse response = orderService.getOrderById(orderId, userId);
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
 
@@ -166,7 +168,7 @@ public class OrderController {
             @RequestParam String status) {
         OrderStatus orderStatus = OrderStatus.valueOf(status);
         OrderStatusChangeRequest request = new OrderStatusChangeRequest(orderId, orderStatus, null);
-        OrderResponse response = orderService.updateOrderStatus(request);
+        OrderResponse response = orderService.updateOrderStatus(orderId, request);
         return ResponseEntity.ok(ApiResponse.ok(response, "Order status updated successfully"));
     }
 
@@ -186,8 +188,9 @@ public class OrderController {
     })
     public ResponseEntity<ApiResponse<OrderResponse>> cancelOrder(
             @Parameter(description = "Order ID to cancel", example = "ORD-20260523-999")
-            @PathVariable String orderId) {
-        OrderResponse response = orderService.cancelOrder(orderId);
+            @PathVariable String orderId,
+            @RequestParam String userId) {
+        OrderResponse response = orderService.cancelOrder(orderId, userId, null);
         return ResponseEntity.ok(ApiResponse.ok(response, "Order cancelled successfully"));
     }
 }

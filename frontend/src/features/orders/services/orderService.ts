@@ -42,6 +42,17 @@ export const orderService = {
   },
 
   /**
+   * Repay a failed/unpaid online payment
+   * Response: ApiResponse<OrderResponse> (which contains the new paymentUrl)
+   */
+  async repayPayment(orderId: string): Promise<OrderResponse> {
+    const response = await apiClient.post<ApiResponse<OrderResponse>>(
+      `${CHECKOUT_API}/orders/${orderId}/repay`
+    );
+    return response.data.data;
+  },
+
+  /**
    * Preview order before checkout
    * Response: ApiResponse<OrderPreviewResponse>
    */

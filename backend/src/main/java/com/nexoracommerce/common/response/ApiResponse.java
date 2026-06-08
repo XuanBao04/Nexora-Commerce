@@ -7,9 +7,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
-/**
- * Standardized API Response wrapper for all successful responses
- */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

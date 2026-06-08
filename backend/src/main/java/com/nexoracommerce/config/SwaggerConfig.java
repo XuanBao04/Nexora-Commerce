@@ -15,8 +15,8 @@ import org.springframework.context.annotation.Configuration;
  * Global Configuration for SpringDoc OpenAPI 3.
  * Configures package filtering and JWT security schemes globally.
  * 
- * Access Swagger UI at: http://localhost:8080/swagger-ui.html
- * Access OpenAPI JSON at: http://localhost:8080/v3/api-docs
+ * Access Swagger UI at: http://localhost:8080/api/swagger-ui.html
+ * Access OpenAPI JSON at: http://localhost:8080/api/v3/api-docs
  */
 @Configuration
 public class SwaggerConfig {

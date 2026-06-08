@@ -5,30 +5,33 @@ import com.nexoracommerce.category.dto.response.CategoryResponse;
 import com.nexoracommerce.category.entity.Category;
 import com.nexoracommerce.category.mapper.CategoryMapper;
 import com.nexoracommerce.category.repository.CategoryRepository;
-import com.nexoracommerce.category.service.ICategoryService;
+import com.nexoracommerce.category.service.CategoryService;
 import com.nexoracommerce.common.exception.BusinessLogicException;
 import com.nexoracommerce.common.exception.ResourceNotFoundException;
+import com.nexoracommerce.common.util.SlugUtils;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.text.Normalizer;
 import java.util.List;
-import java.util.regex.Pattern;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class CategoryServiceImpl implements ICategoryService {
+public class CategoryServiceImpl implements CategoryService {
 
     private final CategoryRepository categoryRepository;
     private final CategoryMapper categoryMapper;
 
     @Override
     public List<CategoryResponse> getCategoryTree() {
-        List<Category> roots = categoryRepository.findByParentIsNull();
+        List<Category> all = categoryRepository.findAllWithChildren();
+        List<Category> roots = all.stream()
+                .filter(c -> c.getParent() == null)
+                .toList();
         return categoryMapper.toResponseList(roots);
     }
 
@@ -57,12 +60,9 @@ public class CategoryServiceImpl implements ICategoryService {
     @Override
     @Transactional
     public CategoryResponse createCategory(CategoryRequest request) {
-        String slug = request.slug();
-        if (slug == null || slug.trim().isEmpty()) {
-            slug = generateSlug(request.name());
-        } else {
-            slug = generateSlug(slug);
-        }
+        String slug = (request.slug() != null && !request.slug().trim().isEmpty())
+                ? SlugUtils.generateSlug(request.slug())
+                : SlugUtils.generateSlug(request.name());
 
         if (categoryRepository.existsBySlug(slug)) {
             throw new BusinessLogicException("Category slug already exists: " + slug);
@@ -80,8 +80,7 @@ public class CategoryServiceImpl implements ICategoryService {
                 .parent(parent)
                 .build();
 
-        Category savedCategory = categoryRepository.save(java.util.Objects.requireNonNull(category));
-        return categoryMapper.toResponse(savedCategory);
+        return categoryMapper.toResponse(categoryRepository.save(category));
     }
 
     @Override
@@ -90,12 +89,9 @@ public class CategoryServiceImpl implements ICategoryService {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Category not found with id: " + id));
 
-        String slug = request.slug();
-        if (slug == null || slug.trim().isEmpty()) {
-            slug = generateSlug(request.name());
-        } else {
-            slug = generateSlug(slug);
-        }
+        String slug = (request.slug() != null && !request.slug().trim().isEmpty())
+                ? SlugUtils.generateSlug(request.slug())
+                : SlugUtils.generateSlug(request.name());
 
         if (categoryRepository.existsBySlugAndIdNot(slug, id)) {
             throw new BusinessLogicException("Category slug already in use by another category: " + slug);
@@ -109,7 +105,7 @@ public class CategoryServiceImpl implements ICategoryService {
             parent = categoryRepository.findById(request.parentId())
                     .orElseThrow(() -> new ResourceNotFoundException("Parent category not found with id: " + request.parentId()));
 
-            // Prevent cyclic hierarchy
+            // Chống vòng lặp phân cấp
             if (isDescendant(category, parent)) {
                 throw new BusinessLogicException("Cannot set parent to a descendant category (creates cyclic reference)");
             }
@@ -119,46 +115,30 @@ public class CategoryServiceImpl implements ICategoryService {
         category.setSlug(slug);
         category.setParent(parent);
 
-        Category updatedCategory = categoryRepository.save(category);
-        return categoryMapper.toResponse(updatedCategory);
+        return categoryMapper.toResponse(categoryRepository.save(category));
     }
 
     @Override
     @Transactional
     public void deleteCategory(Long id) {
-        if (!categoryRepository.existsById(java.util.Objects.requireNonNull(id))) {
+        if (!categoryRepository.existsById(Objects.requireNonNull(id))) {
             throw new ResourceNotFoundException("Category not found with id: " + id);
         }
-        categoryRepository.deleteById(java.util.Objects.requireNonNull(id));
+        categoryRepository.deleteById(id);
     }
 
     private boolean isDescendant(Category category, Category potentialDescendant) {
         Category current = potentialDescendant.getParent();
         while (current != null) {
-            if (current.getId().equals(category.getId())) {
-                return true;
-            }
+            if (current.getId().equals(category.getId())) return true;
             current = current.getParent();
         }
         return false;
     }
 
-    private String generateSlug(String input) {
-        if (input == null) return "";
-        String temp = Normalizer.normalize(input, Normalizer.Form.NFD);
-        Pattern pattern = Pattern.compile("\\p{InCombiningDiacriticalMarks}+");
-        String slug = pattern.matcher(temp).replaceAll("")
-                .toLowerCase()
-                .replaceAll("[^a-z0-9\\s-]", "")
-                .replaceAll("\\s+", "-")
-                .replaceAll("-+", "-")
-                .replaceAll("^-|-$", "");
-        return slug;
-    }
-
     @Override
     public Page<CategoryResponse> getCategoriesPageable(Pageable pageable) {
-        Page<Category> categoryPage = categoryRepository.findAll(java.util.Objects.requireNonNull(pageable));
-        return categoryPage.map(categoryMapper::toResponse);
+        return categoryRepository.findAll(Objects.requireNonNull(pageable))
+                .map(categoryMapper::toResponse);
     }
 }

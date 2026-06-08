@@ -3,7 +3,7 @@ package com.nexoracommerce.order.controller;
 import com.nexoracommerce.common.response.ApiResponse;
 import com.nexoracommerce.order.dto.request.OrderStatusChangeRequest;
 import com.nexoracommerce.order.dto.response.OrderResponse;
-import com.nexoracommerce.order.service.IOrderService;
+import com.nexoracommerce.order.service.OrderService;
 import com.nexoracommerce.common.enums.OrderStatus;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -32,7 +32,7 @@ import java.util.List;
 @Tag(name = "Admin Order Module", description = "Endpoints for admin to manage orders")
 public class AdminOrderController {
 
-    private final IOrderService orderService;
+    private final OrderService orderService;
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -49,7 +49,7 @@ public class AdminOrderController {
             pageable = PageRequest.of(pageable.getPageNumber(), 100, pageable.getSort());
         }
 
-        Page<OrderResponse> orderPage = orderService.getAllOrdersPageable(pageable);
+        Page<OrderResponse> orderPage = orderService.getOrdersWithFilters(null, null, null, null, null, null, null, pageable);
         
         return ResponseEntity.ok(
                 ApiResponse.okWithPagination(
@@ -68,7 +68,7 @@ public class AdminOrderController {
             @RequestParam String status) {
         OrderStatus orderStatus = OrderStatus.valueOf(status);
         OrderStatusChangeRequest request = new OrderStatusChangeRequest(orderId, orderStatus, null);
-        OrderResponse response = orderService.updateOrderStatus(request);
+        OrderResponse response = orderService.updateOrderStatus(orderId, request);
         return ResponseEntity.ok(ApiResponse.ok(response, "Order status updated successfully"));
     }
 }

@@ -11,60 +11,45 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
-/**
- * Service to sync stock from PostgreSQL database to Redis cache
- * Ensures Redis has latest stock data on startup and periodically
- */
+// Đồng bộ tồn kho từ PostgreSQL sang Redis
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class StockSyncService implements IStockSyncService {
+public class StockSyncServiceImpl implements StockSyncService {
 
     private final RedisStockService redisStockService;
     private final ProductVariantRepository productVariantRepository;
-    
-    /**
-     * Syncs all product stock from DB to Redis on application startup
-     */
+
+    // Đồng bộ khi khởi động ứng dụng
     @EventListener(ApplicationReadyEvent.class)
     public void syncStockOnStartup() {
         log.info("Starting initial stock sync from DB to Redis...");
         try {
             syncAllStock();
-            log.info("Initial stock sync completed successfully");
+            log.info("Initial stock sync completed");
         } catch (Exception e) {
             log.error("Error during initial stock sync", e);
-            // Don't fail startup, but log error
         }
     }
-    
-    /**
-     * Periodically syncs stock from DB to Redis (every 5 minutes)
-     * This ensures Redis stays in sync even if there are inconsistencies
-     */
-    @Scheduled(fixedDelay = 300000) // 5 minutes
+
+    // Đồng bộ định kỳ mỗi 5 phút
+    @Scheduled(fixedDelay = 300000)
     public void syncStockPeriodically() {
-        log.debug("Periodic stock sync from DB to Redis triggered");
+        log.debug("Periodic stock sync triggered");
         try {
             syncAllStock();
         } catch (Exception e) {
             log.error("Error during periodic stock sync", e);
         }
     }
-    
-    /**
-     * Syncs a single product's stock from DB to Redis
-     */
+
     public void syncProductStock(String productId) {
         try {
-            ProductVariant variant = productVariantRepository.findBySku(productId)
-                    .orElse(null);
-            
+            ProductVariant variant = productVariantRepository.findBySku(productId).orElse(null);
+
             if (variant != null) {
                 long availableStock = calculateAvailableStock(variant);
                 redisStockService.setStock(productId, availableStock);
-                log.info("Synced product stock: productId={}, availableStock={}", 
-                        productId, availableStock);
             } else {
                 log.warn("Product variant not found for sync: productId={}", productId);
                 redisStockService.setStock(productId, 0);
@@ -73,32 +58,19 @@ public class StockSyncService implements IStockSyncService {
             log.error("Error syncing product stock: productId={}", productId, e);
         }
     }
-    
-    /**
-     * Syncs all products' stock from DB to Redis
-     */
+
     public void syncAllStock() {
-        try {
-            List<ProductVariant> allVariants = productVariantRepository.findAll();
-            log.info("Syncing {} variants from DB to Redis", allVariants.size());
-            
-            for (ProductVariant variant : allVariants) {
-                long availableStock = calculateAvailableStock(variant);
-                // Under default SKU strategy, variant.getSku() is the productId used by the frontend
-                redisStockService.setStock(variant.getSku(), availableStock);
-            }
-            
-            log.info("Stock sync completed for {} variants", allVariants.size());
-        } catch (Exception e) {
-            log.error("Error syncing all stock from DB to Redis", e);
-            throw e;
+        List<ProductVariant> allVariants = productVariantRepository.findAll();
+        log.info("Syncing {} variants from DB to Redis", allVariants.size());
+
+        for (ProductVariant variant : allVariants) {
+            long availableStock = calculateAvailableStock(variant);
+            redisStockService.setStock(variant.getSku(), availableStock);
         }
+
+        log.info("Stock sync completed for {} variants", allVariants.size());
     }
-    
-    /**
-     * Calculates available stock = total quantity - reserved quantity
-     * Matches the logic in InventoryServiceImpl
-     */
+
     private long calculateAvailableStock(ProductVariant variant) {
         int total = variant.getQuantity() != null ? variant.getQuantity() : 0;
         int reserved = variant.getReservedQuantity() != null ? variant.getReservedQuantity() : 0;

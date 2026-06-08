@@ -28,111 +28,78 @@ public interface OrderRepository extends BaseRepository<Order, String> {
 
     // ========== Fetch Queries (with relationships) ==========
 
-    @Query("select distinct o from Order o left join fetch o.orderItems")
+    @Query("""
+        SELECT DISTINCT o 
+        FROM Order o 
+        LEFT JOIN FETCH o.orderItems
+    """)
     List<Order> findAllWithItems();
 
-    @Query("select distinct o from Order o left join fetch o.orderItems where o.id = :orderId")
+    @Query("""
+        SELECT DISTINCT o 
+        FROM Order o 
+        LEFT JOIN FETCH o.orderItems 
+        WHERE o.id = :orderId
+    """)
     Optional<Order> findByIdWithItems(@Param("orderId") String orderId);
 
     @Query("""
-            select distinct o
-            from Order o
-            left join fetch o.orderItems
-            join fetch o.user
-            where o.id = :orderId
-            """)
+        SELECT DISTINCT o
+        FROM Order o
+        LEFT JOIN FETCH o.orderItems
+        JOIN FETCH o.user
+        WHERE o.id = :orderId
+    """)
     Optional<Order> findByIdWithItemsAndUser(@Param("orderId") String orderId);
 
 
     @Query("""
-            select distinct o
-            from Order o
-            left join fetch o.orderItems
-            where o.user.id = :userId
-            order by o.createdAt desc
-            """)
+        SELECT DISTINCT o
+        FROM Order o
+        LEFT JOIN FETCH o.orderItems
+        WHERE o.user.id = :userId
+        ORDER BY o.createdAt DESC
+    """)
     List<Order> findByUserIdOrderByCreatedAtDescWithItems(@Param("userId") UUID userId);
 
     // ========== Pagination Queries ==========
 
     /**
-     * Find all orders with pagination (for admin)
+     * Tìm kiếm và lọc đơn hàng linh hoạt
      */
-    @Query(value = "select o from Order o order by o.createdAt desc",
-           countQuery = "select count(o) from Order o")
-    Page<Order> findAllWithItemsPageable(Pageable pageable);
-
-    /**
-     * Find orders by user ID with pagination
-     */
-    @Query(value = """
-            select o
-            from Order o
-            where o.user.id = :userId
-            order by o.createdAt desc
-            """,
-           countQuery = "select count(o) from Order o where o.user.id = :userId")
-    Page<Order> findByUserIdWithItemsPageable(@Param("userId") UUID userId, Pageable pageable);
-
-    /**
-     * Find orders by status with pagination
-     */
-    Page<Order> findByStatus(OrderStatus status, Pageable pageable);
-
-    /**
-     * Find orders by user ID and status with pagination
-     */
-    Page<Order> findByUser_IdAndStatus(UUID userId, OrderStatus status, Pageable pageable);
-
-    /**
-     * Find orders by payment status with pagination
-     */
-    Page<Order> findByPaymentStatus(PaymentStatus paymentStatus, Pageable pageable);
-
-    /**
-     * Find orders by user ID and payment status
-     */
-    Page<Order> findByUser_IdAndPaymentStatus(UUID userId, PaymentStatus paymentStatus, Pageable pageable);
-
-    /**
-     * Find unpaid orders for a user
-     */
-    @Query("""
-            select o
-            from Order o
-            where o.user.id = :userId and o.paymentStatus = :paymentStatus
-            order by o.createdAt desc
-            """)
-    Page<Order> findUnpaidOrdersByUser(@Param("userId") UUID userId, 
-                                       @Param("paymentStatus") PaymentStatus paymentStatus,
-                                       Pageable pageable);
-
-    /**
-     * Find orders by date range
-     */
-    Page<Order> findByCreatedAtBetween(LocalDateTime startDate, LocalDateTime endDate, Pageable pageable);
-
-    /**
-     * Find orders by user and date range
-     */
-    Page<Order> findByUser_IdAndCreatedAtBetween(UUID userId, LocalDateTime startDate, 
-                                                 LocalDateTime endDate, Pageable pageable);
-
-    /**
-     * Find orders with total price greater than threshold
-     */
-    Page<Order> findByTotalPriceGreaterThan(Long minPrice, Pageable pageable);
-
-    /**
-     * Find orders by coupon code
-     */
-    @Query("""
-            select o
-            from Order o
-            where o.coupon.code = :couponCode
-            order by o.createdAt desc
-            """)
-    Page<Order> findByCouponCode(@Param("couponCode") String couponCode, Pageable pageable);
+    @Query(
+        value = """
+            SELECT o 
+            FROM Order o 
+            WHERE (CAST(:userId AS uuid) IS NULL OR o.user.id = :userId)
+              AND (:status IS NULL OR o.status = :status)
+              AND (:paymentStatus IS NULL OR o.paymentStatus = :paymentStatus)
+              AND (:couponCode IS NULL OR o.coupon.code = :couponCode)
+              AND (CAST(:startDate AS timestamp) IS NULL OR o.createdAt >= :startDate)
+              AND (CAST(:endDate AS timestamp) IS NULL OR o.createdAt <= :endDate)
+              AND (:minPrice IS NULL OR o.totalPrice >= :minPrice)
+        """,
+        countQuery = """
+            SELECT COUNT(o) 
+            FROM Order o 
+            WHERE (CAST(:userId AS uuid) IS NULL OR o.user.id = :userId)
+              AND (:status IS NULL OR o.status = :status)
+              AND (:paymentStatus IS NULL OR o.paymentStatus = :paymentStatus)
+              AND (:couponCode IS NULL OR o.coupon.code = :couponCode)
+              AND (CAST(:startDate AS timestamp) IS NULL OR o.createdAt >= :startDate)
+              AND (CAST(:endDate AS timestamp) IS NULL OR o.createdAt <= :endDate)
+              AND (:minPrice IS NULL OR o.totalPrice >= :minPrice)
+        """
+    )
+    Page<Order> findOrdersWithFilters(
+            @Param("userId") UUID userId,
+            @Param("status") OrderStatus status,
+            @Param("paymentStatus") PaymentStatus paymentStatus,
+            @Param("couponCode") String couponCode,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate,
+            @Param("minPrice") Long minPrice,
+            Pageable pageable);
 
     // ========== Count Queries ==========
 
@@ -154,7 +121,11 @@ public interface OrderRepository extends BaseRepository<Order, String> {
     /**
      * Count unpaid orders
      */
-    @Query("select count(o) from Order o where o.paymentStatus = :paymentStatus")
+    @Query("""
+        SELECT COUNT(o) 
+        FROM Order o 
+        WHERE o.paymentStatus = :paymentStatus
+    """)
     long countUnpaidOrders(@Param("paymentStatus") PaymentStatus paymentStatus);
 
     /**
@@ -167,52 +138,81 @@ public interface OrderRepository extends BaseRepository<Order, String> {
     /**
      * Total revenue (sum of all order totals)
      */
-    @Query("select coalesce(sum(o.totalPrice), 0) from Order o")
+    @Query("""
+        SELECT COALESCE(SUM(o.totalPrice), 0) 
+        FROM Order o
+    """)
     long getTotalRevenue();
 
     /**
      * Average order value
      */
-    @Query("select coalesce(avg(o.totalPrice), 0) from Order o")
+    @Query("""
+        SELECT COALESCE(AVG(o.totalPrice), 0) 
+        FROM Order o
+    """)
     double getAverageOrderValue();
 
     /**
      * Total revenue by status
      */
-    @Query("select coalesce(sum(o.totalPrice), 0) from Order o where o.status = :status")
+    @Query("""
+        SELECT COALESCE(SUM(o.totalPrice), 0) 
+        FROM Order o 
+        WHERE o.status = :status
+    """)
     long getTotalRevenueByStatus(@Param("status") OrderStatus status);
 
     /**
      * Total net revenue (sum of all paid order totals)
      */
-    @Query("select coalesce(sum(o.totalPrice), 0) from Order o where o.paymentStatus = 'PAID'")
+    @Query("""
+        SELECT COALESCE(SUM(o.totalPrice), 0) 
+        FROM Order o 
+        WHERE o.paymentStatus = 'PAID'
+    """)
     long getTotalRevenueByPaymentStatusPaid();
 
     /**
      * Daily revenue aggregation for paid orders within a start date
      */
-    @Query("select cast(o.createdAt as LocalDate), coalesce(sum(o.totalPrice), 0) " +
-           "from Order o " +
-           "where o.paymentStatus = 'PAID' and o.createdAt >= :startDate " +
-           "group by cast(o.createdAt as LocalDate) " +
-           "order by cast(o.createdAt as LocalDate) asc")
+    @Query("""
+        SELECT CAST(o.createdAt AS LocalDate), COALESCE(SUM(o.totalPrice), 0) 
+        FROM Order o 
+        WHERE o.paymentStatus = 'PAID' 
+          AND o.createdAt >= :startDate 
+        GROUP BY CAST(o.createdAt AS LocalDate) 
+        ORDER BY CAST(o.createdAt AS LocalDate) ASC
+    """)
     List<Object[]> findRevenueByDateRange(@Param("startDate") LocalDateTime startDate);
 
     /**
      * Count of orders grouped by status
      */
-    @Query("select o.status, count(o) from Order o group by o.status")
+    @Query("""
+        SELECT o.status, COUNT(o) 
+        FROM Order o 
+        GROUP BY o.status
+    """)
     List<Object[]> getOrderStatusStats();
 
-    /**
-     * Get recent orders for user (last N orders)
-     */
     @Query("""
-            select o
-            from Order o
-            where o.user.id = :userId
-            order by o.createdAt desc
-            """)
+        SELECT o
+        FROM Order o
+        WHERE o.user.id = :userId
+        ORDER BY o.createdAt DESC
+    """)
     List<Order> getRecentOrdersByUser(@Param("userId") UUID userId, Pageable pageable);
 
+    @Query("""
+        SELECT DISTINCT o
+        FROM Order o
+        LEFT JOIN FETCH o.orderItems
+        JOIN FETCH o.paymentTransactions pt
+        WHERE o.status = com.nexoracommerce.common.enums.OrderStatus.PENDING
+          AND o.paymentStatus = com.nexoracommerce.payment.enums.PaymentStatus.UNPAID
+          AND pt.paymentMethod = com.nexoracommerce.payment.enums.PaymentMethod.VNPAY
+          AND o.createdAt <= :thresholdTime
+    """)
+    List<Order> findExpiredUnpaidVnPayOrders(@Param("thresholdTime") LocalDateTime thresholdTime);
 }

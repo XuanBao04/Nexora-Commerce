@@ -23,7 +23,7 @@ services:
       - ../.env
     command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD}"]
     volumes:
-      - redis_data:/data
+      - redis_data:/data 
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 10s

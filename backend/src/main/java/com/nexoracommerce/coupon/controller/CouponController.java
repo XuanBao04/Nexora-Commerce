@@ -4,7 +4,7 @@ import com.nexoracommerce.common.response.ApiResponse;
 import com.nexoracommerce.coupon.dto.request.CreateCouponRequest;
 import com.nexoracommerce.coupon.dto.request.UpdateCouponRequest;
 import com.nexoracommerce.coupon.dto.response.CouponResponse;
-import com.nexoracommerce.coupon.service.ICouponService;
+import com.nexoracommerce.coupon.service.CouponService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
@@ -40,7 +40,7 @@ import java.util.List;
 @Tag(name = "Coupon Module", description = "Endpoints for promotion codes, discount calculation, and coupon administration")
 public class CouponController {
 
-    private final ICouponService couponService;
+    private final CouponService couponService;
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")

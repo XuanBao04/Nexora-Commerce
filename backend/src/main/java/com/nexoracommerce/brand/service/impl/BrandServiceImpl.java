@@ -5,23 +5,23 @@ import com.nexoracommerce.brand.dto.response.BrandResponse;
 import com.nexoracommerce.brand.entity.Brand;
 import com.nexoracommerce.brand.mapper.BrandMapper;
 import com.nexoracommerce.brand.repository.BrandRepository;
-import com.nexoracommerce.brand.service.IBrandService;
+import com.nexoracommerce.brand.service.BrandService;
 import com.nexoracommerce.common.exception.BusinessLogicException;
 import com.nexoracommerce.common.exception.ResourceNotFoundException;
+import com.nexoracommerce.common.util.SlugUtils;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.text.Normalizer;
 import java.util.List;
-import java.util.regex.Pattern;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class BrandServiceImpl implements IBrandService {
+public class BrandServiceImpl implements BrandService {
 
     private final BrandRepository brandRepository;
     private final BrandMapper brandMapper;
@@ -41,7 +41,7 @@ public class BrandServiceImpl implements IBrandService {
 
     @Override
     public BrandResponse getBrandById(Long id) {
-        Brand brand = brandRepository.findById(java.util.Objects.requireNonNull(id))
+        Brand brand = brandRepository.findById(Objects.requireNonNull(id))
                 .orElseThrow(() -> new ResourceNotFoundException("Brand not found with id: " + id));
         return brandMapper.toResponse(brand);
     }
@@ -56,12 +56,9 @@ public class BrandServiceImpl implements IBrandService {
     @Override
     @Transactional
     public BrandResponse createBrand(BrandRequest request) {
-        String slug = request.slug();
-        if (slug == null || slug.trim().isEmpty()) {
-            slug = generateSlug(request.name());
-        } else {
-            slug = generateSlug(slug);
-        }
+        String slug = (request.slug() != null && !request.slug().trim().isEmpty())
+                ? SlugUtils.generateSlug(request.slug())
+                : SlugUtils.generateSlug(request.name());
 
         if (brandRepository.existsBySlug(slug)) {
             throw new BusinessLogicException("Brand slug already exists: " + slug);
@@ -72,22 +69,18 @@ public class BrandServiceImpl implements IBrandService {
                 .slug(slug)
                 .build();
 
-        Brand savedBrand = brandRepository.save(java.util.Objects.requireNonNull(brand));
-        return brandMapper.toResponse(savedBrand);
+        return brandMapper.toResponse(brandRepository.save(brand));
     }
 
     @Override
     @Transactional
     public BrandResponse updateBrand(Long id, BrandRequest request) {
-        Brand brand = brandRepository.findById(java.util.Objects.requireNonNull(id))
+        Brand brand = brandRepository.findById(Objects.requireNonNull(id))
                 .orElseThrow(() -> new ResourceNotFoundException("Brand not found with id: " + id));
 
-        String slug = request.slug();
-        if (slug == null || slug.trim().isEmpty()) {
-            slug = generateSlug(request.name());
-        } else {
-            slug = generateSlug(slug);
-        }
+        String slug = (request.slug() != null && !request.slug().trim().isEmpty())
+                ? SlugUtils.generateSlug(request.slug())
+                : SlugUtils.generateSlug(request.name());
 
         if (brandRepository.existsBySlugAndIdNot(slug, id)) {
             throw new BusinessLogicException("Brand slug already in use by another brand: " + slug);
@@ -96,35 +89,21 @@ public class BrandServiceImpl implements IBrandService {
         brand.setName(request.name().trim());
         brand.setSlug(slug);
 
-        Brand updatedBrand = brandRepository.save(brand);
-        return brandMapper.toResponse(updatedBrand);
+        return brandMapper.toResponse(brandRepository.save(brand));
     }
 
     @Override
     @Transactional
     public void deleteBrand(Long id) {
-        if (!brandRepository.existsById(java.util.Objects.requireNonNull(id))) {
+        if (!brandRepository.existsById(Objects.requireNonNull(id))) {
             throw new ResourceNotFoundException("Brand not found with id: " + id);
         }
-        brandRepository.deleteById(java.util.Objects.requireNonNull(id));
-    }
-
-    private String generateSlug(String input) {
-        if (input == null) return "";
-        String temp = Normalizer.normalize(input, Normalizer.Form.NFD);
-        Pattern pattern = Pattern.compile("\\p{InCombiningDiacriticalMarks}+");
-        String slug = pattern.matcher(temp).replaceAll("")
-                .toLowerCase()
-                .replaceAll("[^a-z0-9\\s-]", "")
-                .replaceAll("\\s+", "-")
-                .replaceAll("-+", "-")
-                .replaceAll("^-|-$", "");
-        return slug;
+        brandRepository.deleteById(id);
     }
 
     @Override
     public Page<BrandResponse> getBrandsPageable(Pageable pageable) {
-        Page<Brand> brandPage = brandRepository.findAll(java.util.Objects.requireNonNull(pageable));
-        return brandPage.map(brandMapper::toResponse);
+        return brandRepository.findAll(Objects.requireNonNull(pageable))
+                .map(brandMapper::toResponse);
     }
 }

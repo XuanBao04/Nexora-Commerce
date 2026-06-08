@@ -33,7 +33,7 @@ public class GlobalExceptionHandler {
                 .message(ex.getMessage())
                 .build();
                 
-        return ResponseEntity.status(java.util.Objects.requireNonNull(ex.getStatus())).body(response);
+        return ResponseEntity.status(ex.getStatus()).body(response);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -131,7 +131,7 @@ public class GlobalExceptionHandler {
                 .success(false)
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
-                .message("An unexpected error occurred. Please contact system support and quote Error ID: " + errorId)
+                .message("Error: " + ex.getMessage() + " | Error ID: " + errorId)
                 .build();
 
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);

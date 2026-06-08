@@ -1,7 +1,7 @@
 package com.nexoracommerce.brand.controller;
 
 import com.nexoracommerce.brand.dto.response.BrandResponse;
-import com.nexoracommerce.brand.service.IBrandService;
+import com.nexoracommerce.brand.service.BrandService;
 import com.nexoracommerce.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -27,7 +27,7 @@ import java.util.List;
 @Tag(name = "Admin Brand Module", description = "Endpoints for admin to manage brands")
 public class AdminBrandController {
 
-    private final IBrandService brandService;
+    private final BrandService brandService;
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")

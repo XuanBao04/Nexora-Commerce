@@ -113,7 +113,6 @@ const Cart = () => {
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:items-start">
-        {/* Left Shopping List & Form details */}
         <div className="space-y-6 lg:col-span-2">
           <section className="surface p-6 sm:p-8" data-testid="cart-items-container">
             <div className="mb-6 flex items-center justify-between border-b border-zinc-100 pb-4">
@@ -135,11 +134,8 @@ const Cart = () => {
               ))}
             </div>
           </section>
-
-          {/* Removed AddressForm */}
         </div>
 
-        {/* Right receipts column and Actions */}
         <aside className="space-y-6 lg:sticky lg:top-24">
 
 

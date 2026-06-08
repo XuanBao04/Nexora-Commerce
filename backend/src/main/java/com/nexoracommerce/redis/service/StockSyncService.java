@@ -1,6 +1,6 @@
 package com.nexoracommerce.redis.service;
 
-public interface IStockSyncService {
+public interface StockSyncService {
     void syncProductStock(String productId);
 
     void syncAllStock();

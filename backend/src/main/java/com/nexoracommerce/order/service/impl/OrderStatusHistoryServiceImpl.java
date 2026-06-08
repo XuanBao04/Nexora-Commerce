@@ -9,7 +9,7 @@ import com.nexoracommerce.order.entity.OrderStatusHistory;
 import com.nexoracommerce.order.mapper.OrderMapper;
 import com.nexoracommerce.order.repository.OrderRepository;
 import com.nexoracommerce.order.repository.OrderStatusHistoryRepository;
-import com.nexoracommerce.order.service.IOrderStatusHistoryService;
+import com.nexoracommerce.order.service.OrderStatusHistoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -24,7 +24,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class OrderStatusHistoryServiceImpl implements IOrderStatusHistoryService {
+public class OrderStatusHistoryServiceImpl implements OrderStatusHistoryService {
 
     private final OrderStatusHistoryRepository orderStatusHistoryRepository;
     private final OrderRepository orderRepository;
